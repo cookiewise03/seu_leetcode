@@ -307,6 +307,10 @@
             <i class="fa-solid fa-sliders text-indigo-500"></i>
             初始化配置 (JSON)
           </div>
+          <div class="mb-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60 p-2">
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-2">可视化表单（推荐）</div>
+            <div id="initForm" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+          </div>
           <textarea id="initInput" class="w-full h-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400/50 resize-y" spellcheck="false" wrap="off"></textarea>
           <p class="mt-2 text-[11px] text-slate-500 dark:text-slate-400">直接修改这里的初始化，点击“应用初始化”后会重建左侧动画；代码输入区只负责展示与行高亮。</p>
         </div>
@@ -3710,6 +3714,172 @@ function renderInitEditor() {
     State.initDraftByAlgo[key] = JSON.stringify(getCurrentInitForAlgo(key), null, 2);
   }
   area.value = State.initDraftByAlgo[key];
+  renderInitForm();
+}
+
+const InitFieldConfig = {
+  bubbleSort: [{ path: 'array', label: '数组', type: 'numArray' }],
+  selectionSort: [{ path: 'array', label: '数组', type: 'numArray' }],
+  insertionSort: [{ path: 'array', label: '数组', type: 'numArray' }],
+  quickSort: [{ path: 'array', label: '数组', type: 'numArray' }],
+  mergeSort: [{ path: 'array', label: '数组', type: 'numArray' }],
+  linearSearch: [{ path: 'array', label: '数组', type: 'numArray' }, { path: 'target', label: '目标值', type: 'number' }],
+  binarySearch: [{ path: 'array', label: '有序数组', type: 'numArray' }, { path: 'target', label: '目标值', type: 'number' }],
+  stack: [{ path: 'initial', label: '初始入栈序列', type: 'numArray' }, { path: 'pops', label: '弹栈次数', type: 'number' }],
+  queue: [{ path: 'initial', label: '初始入队序列', type: 'numArray' }, { path: 'dequeues', label: '出队次数', type: 'number' }],
+  linkedList: [{ path: 'list', label: '链表节点', type: 'numArray' }, { path: 'insert.index', label: '插入索引', type: 'number' }, { path: 'insert.value', label: '插入值', type: 'number' }, { path: 'deleteIndex', label: '删除索引', type: 'number' }],
+  hashTable: [{ path: 'size', label: '桶数量', type: 'number' }, { path: 'entries', label: '键值对', type: 'entries' }],
+  binaryTree: [{ path: 'levelOrder', label: '层序(可含null)', type: 'levelOrder' }],
+  bst: [{ path: 'levelOrder', label: '层序(可含null)', type: 'levelOrder' }, { path: 'target', label: '查找目标', type: 'number' }],
+  heap: [{ path: 'values', label: '入堆序列', type: 'numArray' }, { path: 'pops', label: '弹出次数', type: 'number' }],
+  bfs: [{ path: 'start', label: '起点', type: 'number' }, { path: 'edges', label: '边列表', type: 'edgePairs' }],
+  dfs: [{ path: 'start', label: '起点', type: 'number' }, { path: 'edges', label: '边列表', type: 'edgePairs' }],
+  slidingWindow: [{ path: 'array', label: '数组', type: 'numArray' }, { path: 'k', label: '窗口大小k', type: 'number' }],
+  twoPointers: [{ path: 'array', label: '有序数组', type: 'numArray' }, { path: 'target', label: '目标和', type: 'number' }],
+  recursion: [{ path: 'n', label: '递归输入n', type: 'number' }],
+  dp: [{ path: 'n', label: 'DP输入n', type: 'number' }]
+};
+
+function getPathValue(obj, path) {
+  return path.split('.').reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
+}
+
+function setPathValue(obj, path, value) {
+  const keys = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    if (cur[k] == null || typeof cur[k] !== 'object') cur[k] = {};
+    cur = cur[k];
+  }
+  cur[keys[keys.length - 1]] = value;
+}
+
+function parseNumArrayInput(v) {
+  return String(v || '')
+    .split(',')
+    .map(s => Number(s.trim()))
+    .filter(Number.isFinite);
+}
+
+function formatNumArray(v) {
+  return Array.isArray(v) ? v.join(', ') : '';
+}
+
+function parseLevelOrderInput(v) {
+  return String(v || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(t => (/^null$/i.test(t) ? null : Number(t)))
+    .filter(x => x === null || Number.isFinite(x));
+}
+
+function formatLevelOrder(v) {
+  return Array.isArray(v) ? v.map(x => (x == null ? 'null' : String(x))).join(', ') : '';
+}
+
+function parseEntriesInput(v) {
+  const items = String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+  const out = [];
+  items.forEach(item => {
+    const idx = item.indexOf(':');
+    if (idx <= 0) return;
+    const k = item.slice(0, idx).trim();
+    const n = Number(item.slice(idx + 1).trim());
+    if (k && Number.isFinite(n)) out.push([k, n]);
+  });
+  return out;
+}
+
+function formatEntries(v) {
+  return Array.isArray(v) ? v.map(pair => `${pair[0]}:${pair[1]}`).join(', ') : '';
+}
+
+function parseEdgePairsInput(v) {
+  const items = String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+  const out = [];
+  items.forEach(item => {
+    const parts = item.split('-').map(x => Number(x.trim()));
+    if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+      out.push([parts[0], parts[1]]);
+    }
+  });
+  return out;
+}
+
+function formatEdgePairs(v) {
+  return Array.isArray(v) ? v.map(pair => `${pair[0]}-${pair[1]}`).join(', ') : '';
+}
+
+function parseFieldByType(type, raw) {
+  if (type === 'number') {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (type === 'numArray') return parseNumArrayInput(raw);
+  if (type === 'levelOrder') return parseLevelOrderInput(raw);
+  if (type === 'entries') return parseEntriesInput(raw);
+  if (type === 'edgePairs') return parseEdgePairsInput(raw);
+  return raw;
+}
+
+function formatFieldByType(type, value) {
+  if (type === 'number') return String(value ?? '');
+  if (type === 'numArray') return formatNumArray(value);
+  if (type === 'levelOrder') return formatLevelOrder(value);
+  if (type === 'entries') return formatEntries(value);
+  if (type === 'edgePairs') return formatEdgePairs(value);
+  return String(value ?? '');
+}
+
+function updateInitDraftAndForm(nextObj) {
+  const normalized = normalizeInitForAlgo(State.currentAlgo, nextObj);
+  const json = JSON.stringify(normalized, null, 2);
+  State.initDraftByAlgo[State.currentAlgo] = json;
+  document.getElementById('initInput').value = json;
+}
+
+function renderInitForm() {
+  const wrap = document.getElementById('initForm');
+  if (!wrap) return;
+  const fields = InitFieldConfig[State.currentAlgo] || [];
+  if (!fields.length) {
+    wrap.innerHTML = '<div class="text-xs text-slate-400">当前算法无可视化字段，请直接编辑 JSON。</div>';
+    return;
+  }
+  let obj;
+  try {
+    obj = JSON.parse(document.getElementById('initInput').value || '{}');
+  } catch {
+    wrap.innerHTML = '<div class="text-xs text-rose-500">JSON 暂不可解析，请先修复 JSON。</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  fields.forEach(field => {
+    const item = document.createElement('label');
+    item.className = 'flex flex-col gap-1';
+    const title = document.createElement('span');
+    title.className = 'text-[11px] text-slate-500 dark:text-slate-400';
+    title.textContent = field.label;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'h-8 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 px-2 text-xs text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-300/60';
+    input.value = formatFieldByType(field.type, getPathValue(obj, field.path));
+    input.addEventListener('input', () => {
+      let next;
+      try {
+        next = JSON.parse(document.getElementById('initInput').value || '{}');
+      } catch {
+        next = getCurrentInitForAlgo(State.currentAlgo);
+      }
+      setPathValue(next, field.path, parseFieldByType(field.type, input.value));
+      updateInitDraftAndForm(next);
+    });
+    item.appendChild(title);
+    item.appendChild(input);
+    wrap.appendChild(item);
+  });
 }
 
 function applyCurrentInitFromPanel() {
@@ -4079,6 +4249,7 @@ function bindControls() {
 
   document.getElementById('initInput').addEventListener('input', (e) => {
     State.initDraftByAlgo[State.currentAlgo] = e.target.value;
+    renderInitForm();
   });
 
   document.getElementById('initInput').addEventListener('keydown', (e) => {
