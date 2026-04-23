@@ -1,0 +1,3577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LeetCode Algorithm Animator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+        },
+        colors: {
+          brand: {
+            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe',
+            300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6',
+            600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a'
+          }
+        },
+        animation: {
+          'fade-in': 'fadeIn 0.3s ease-in-out',
+          'pop': 'pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        },
+        keyframes: {
+          fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+          pop: { '0%': { transform: 'scale(0.8)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #f5f3ff 100%);
+    transition: background 0.4s ease;
+  }
+  .dark body, body.dark-bg {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0c0a1f 100%);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.3); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.5); }
+
+  /* VS Code dark theme syntax colors */
+  .code-line { display: flex; padding: 2px 12px; transition: background 0.2s ease; white-space: pre; }
+  .code-line .line-num {
+    display: inline-block; width: 36px; text-align: right; margin-right: 16px;
+    color: #858585; user-select: none; flex-shrink: 0;
+  }
+  .code-line .line-content { flex: 1; }
+  .code-line.active {
+    background: linear-gradient(90deg, rgba(250, 204, 21, 0.35), rgba(251, 146, 60, 0.25));
+    border-left: 3px solid #fbbf24;
+    padding-left: 9px;
+    box-shadow: inset 0 0 20px rgba(251,191,36,0.1);
+  }
+  .code-line.active .line-num { color: #fbbf24; font-weight: 600; }
+
+  .tok-key   { color: #c586c0; }
+  .tok-ctl   { color: #c586c0; }
+  .tok-type  { color: #4ec9b0; }
+  .tok-fn    { color: #dcdcaa; }
+  .tok-var   { color: #9cdcfe; }
+  .tok-num   { color: #b5cea8; }
+  .tok-str   { color: #ce9178; }
+  .tok-com   { color: #6a9955; font-style: italic; }
+  .tok-op    { color: #d4d4d4; }
+  .tok-pun   { color: #d4d4d4; }
+
+  /* Animation elements */
+  .arr-cell {
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .tree-node-circle {
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .tree-node-circle:hover { transform: scale(1.08); }
+  .arr-cell:hover { transform: translateY(-4px) scale(1.05); }
+
+  .btn {
+    transition: all 0.2s ease;
+    user-select: none;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59,130,246,0.25); }
+  .btn:active { transform: translateY(0) scale(0.96); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .nav-btn {
+    transition: all 0.2s ease;
+  }
+  .nav-btn:hover { background: rgba(59,130,246,0.1); }
+  .nav-btn.active {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: white;
+    box-shadow: 0 4px 14px rgba(59,130,246,0.4);
+  }
+
+  .card {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  .dark .card {
+    background: rgba(30,41,59,0.7);
+    border: 1px solid rgba(71,85,105,0.3);
+  }
+
+  .code-container {
+    background: #1e1e1e;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #d4d4d4;
+  }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+  }
+
+  .lang-btn {
+    padding: 4px 10px; border-radius: 6px; font-size: 12px;
+    transition: all 0.2s ease; cursor: pointer;
+    color: #9ca3af;
+  }
+  .lang-btn:hover { color: #e5e7eb; background: rgba(255,255,255,0.06); }
+  .lang-btn.active { color: #fbbf24; background: rgba(251,191,36,0.12); }
+
+  svg text { user-select: none; }
+
+  /* pointer arrow */
+  .pointer-label {
+    font-size: 11px; font-weight: 600;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .desc-box {
+    min-height: 48px;
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ============== TOP NAV ============== -->
+<header class="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border-b border-slate-200/70 dark:border-slate-700/50">
+  <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
+        <i class="fa-solid fa-code text-white text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100 leading-tight">Algorithm Animator</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">LeetCode 数据结构与算法可视化</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="themeToggle" class="btn w-10 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+        <i class="fa-solid fa-moon dark:hidden"></i>
+        <i class="fa-solid fa-sun hidden dark:inline"></i>
+      </button>
+      <a href="https://github.com/cookiewise03/seu_leetcode" target="_blank" rel="noopener noreferrer" class="btn hidden md:flex px-3 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 items-center gap-2 text-sm">
+        <i class="fa-brands fa-github"></i> GitHub
+      </a>
+      <a href="#donateSection" class="btn hidden md:flex px-3 h-10 rounded-lg bg-amber-400/90 border border-amber-300 text-amber-950 items-center gap-2 text-sm font-semibold">
+        <i class="fa-solid fa-mug-hot"></i> 打赏
+      </a>
+    </div>
+  </div>
+
+  <!-- Algorithm selector -->
+  <div class="border-t border-slate-200/70 dark:border-slate-700/50 bg-white/40 dark:bg-slate-900/40">
+    <div class="max-w-[1600px] mx-auto px-4 py-2 flex items-center gap-2 overflow-x-auto" id="algoNav">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</header>
+
+<!-- ============== MAIN ============== -->
+<main class="max-w-[1600px] mx-auto px-4 py-5">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- ===== LEFT: ANIMATION ===== -->
+    <section class="card rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/30 overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-brand-500"></i>
+          <h2 class="font-semibold text-slate-800 dark:text-slate-100" id="algoTitle">冒泡排序</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="stepPill" class="status-pill bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
+            <i class="fa-solid fa-circle-play text-[10px]"></i> Step 0 / 0
+          </span>
+        </div>
+      </div>
+
+      <div class="p-5 flex-1 flex flex-col">
+        <!-- Animation canvas -->
+        <div id="animStage" class="relative flex-1 min-h-[340px] rounded-xl bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800/60 dark:via-indigo-950/40 dark:to-slate-900/60 border border-slate-200/60 dark:border-slate-700/40 p-4 overflow-auto">
+          <!-- SVG or HTML elements injected here -->
+        </div>
+
+        <!-- Description -->
+        <div class="mt-4 desc-box">
+          <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/80 dark:border-amber-700/40 px-4 py-3">
+            <div class="flex items-start gap-2">
+              <i class="fa-solid fa-lightbulb text-amber-500 mt-0.5"></i>
+              <p id="descText" class="text-sm text-amber-900 dark:text-amber-200 leading-relaxed">点击"前进"开始演示</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="mt-4 flex items-center gap-2 flex-wrap">
+          <button id="btnReset" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm">
+            <i class="fa-solid fa-rotate-left"></i> 重置
+          </button>
+          <button id="btnPrev" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm">
+            <i class="fa-solid fa-backward-step"></i> 后退
+          </button>
+          <button id="btnNext" class="btn flex items-center gap-2 px-5 h-10 rounded-lg bg-gradient-to-r from-brand-500 to-indigo-600 text-white font-medium text-sm shadow-lg shadow-brand-500/30">
+            前进 <i class="fa-solid fa-forward-step"></i>
+          </button>
+          <button id="btnPlay" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm">
+            <i class="fa-solid fa-play" id="playIcon"></i> <span id="playText">自动播放</span>
+          </button>
+          <div class="flex items-center gap-2 ml-auto text-xs text-slate-500 dark:text-slate-400">
+            <span>速度</span>
+            <input id="speedRange" type="range" min="200" max="2000" step="100" value="800" class="w-24 accent-brand-500" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RIGHT: CODE ===== -->
+    <section class="card rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/30 overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-file-code text-indigo-500"></i>
+          <h2 class="font-semibold text-slate-800 dark:text-slate-100">代码输入</h2>
+        </div>
+        <div class="flex items-center gap-1" id="langTabs">
+          <!-- language tabs injected by JS -->
+        </div>
+      </div>
+
+      <div class="px-5 pt-4">
+        <div id="opHint" class="rounded-lg bg-sky-50 dark:bg-sky-900/20 border border-sky-200/80 dark:border-sky-700/40 px-3 py-2 text-xs text-sky-800 dark:text-sky-200 leading-relaxed">
+          该算法支持的核心操作会显示在这里。
+        </div>
+      </div>
+
+      <div class="px-5 pt-3 pb-2 text-xs text-slate-500 dark:text-slate-400">
+        输入区已改为可手动编辑。默认模板是带中文注释的参考代码，你可以自由改写，原理对应即可运行演示。
+      </div>
+
+      <textarea id="codeInput" class="code-container flex-1 w-full resize-none px-4 py-3 border-0 outline-none" style="min-height: 500px;"></textarea>
+
+      <div id="codeError" class="mx-5 mb-4 mt-3 hidden rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200/80 dark:border-rose-700/40 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
+        <!-- error message -->
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ============== FOOTER ============== -->
+<footer class="max-w-[1600px] mx-auto px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+  <div id="donateSection" class="mb-4 flex items-center justify-center">
+    <a href="https://github.com/cookiewise03/seu_leetcode" target="_blank" rel="noopener noreferrer" class="btn px-4 h-10 rounded-lg bg-amber-400/90 border border-amber-300 text-amber-950 font-semibold inline-flex items-center gap-2">
+      <i class="fa-solid fa-gift"></i> 打赏支持项目
+    </a>
+  </div>
+  <p>© 2025 <span class="font-semibold text-slate-700 dark:text-slate-200">LeetCode Algorithm Animator</span> · Crafted with <i class="fa-solid fa-heart text-rose-500"></i> for learners</p>
+</footer>
+
+<script>
+/* =========================================================
+ *  LeetCode Algorithm Animator
+ *  Core: global `step` drives code-line highlighting & animation
+ * ========================================================= */
+
+/* ------------ Syntax highlighter (simple, VS-Code-like) ------------ */
+function highlightCode(src, lang) {
+  const keywords = {
+    python: ['def','return','if','elif','else','for','while','in','not','and','or','True','False','None','class','import','from','as','pass','break','continue','lambda','is','self'],
+    java: ['public','private','protected','static','void','int','long','double','float','boolean','String','char','class','return','if','else','for','while','new','null','true','false','this','import','package','final','extends','implements'],
+    cpp: ['int','long','double','float','char','bool','void','auto','class','struct','return','if','else','for','while','new','delete','nullptr','true','false','this','include','using','namespace','std','vector','const','static','public','private','template','typename'],
+    c:   ['int','long','double','float','char','void','struct','return','if','else','for','while','NULL','include','const','static','sizeof','typedef'],
+    js:  ['function','return','if','else','for','while','let','const','var','new','null','undefined','true','false','this','class','import','export','from','async','await','of','in'],
+    go:  ['func','return','if','else','for','range','var','const','nil','true','false','package','import','struct','type','make','append','len','map','chan','go','defer']
+  };
+  const kws = keywords[lang] || [];
+  // Step 1: protect strings and comments with placeholders
+  const tokens = [];
+  const save = (cls, val) => { tokens.push({cls, val}); return `\u0000${tokens.length-1}\u0000`; };
+
+  // comments
+  if (lang === 'python') {
+    src = src.replace(/#.*$/gm, m => save('tok-com', m));
+  } else {
+    src = src.replace(/\/\/.*$/gm, m => save('tok-com', m));
+    src = src.replace(/\/\*[\s\S]*?\*\//g, m => save('tok-com', m));
+  }
+  // strings
+  src = src.replace(/"([^"\\]|\\.)*"/g, m => save('tok-str', m));
+  src = src.replace(/'([^'\\]|\\.)*'/g, m => save('tok-str', m));
+
+  // keywords
+  if (kws.length) {
+    const re = new RegExp(`\\b(${kws.join('|')})\\b`, 'g');
+    src = src.replace(re, '<span class="tok-key">$1</span>');
+  }
+  // function calls
+  src = src.replace(/\b([a-zA-Z_]\w*)(?=\s*\()/g, (m, name) => {
+    if (m.includes('tok-key')) return m;
+    return `<span class="tok-fn">${name}</span>`;
+  });
+
+  // restore placeholders
+  src = src.replace(/\u0000(\d+)\u0000/g, (_, i) => {
+    const t = tokens[+i];
+    const esc = t.val.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<span class="${t.cls}">${esc}</span>`;
+  });
+
+  return src;
+}
+
+/* ------------ Render code lines ------------ */
+function renderCode(lines, lang) {
+  const box = document.getElementById('codeBox');
+  box.innerHTML = '';
+  lines.forEach((ln, idx) => {
+    const row = document.createElement('div');
+    row.className = 'code-line';
+    row.dataset.line = idx;
+    // escape base text
+    const safe = ln.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const hl = highlightCode(safe, lang);
+    row.innerHTML = `<span class="line-num">${idx+1}</span><span class="line-content">${hl || ' '}</span>`;
+    box.appendChild(row);
+  });
+}
+
+function highlightLine(idx) {
+  document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+  if (idx == null || idx < 0) return;
+  const row = document.querySelector(`.code-line[data-line="${idx}"]`);
+  if (row) {
+    row.classList.add('active');
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+/* =========================================================
+ *  ALGORITHM DEFINITIONS
+ *  Each algorithm provides:
+ *   - title, category
+ *   - code: {language -> array of lines}
+ *   - steps: [{line, desc, state}]  (generated by buildSteps)
+ *   - render(state): draw animation from state
+ *  Line indices refer to the code lines (0-based).
+ * ========================================================= */
+
+const Algorithms = {};
+
+/* =========== Helper: draw array bars/cells =========== */
+function renderArrayCells(arr, opts = {}) {
+  const { highlights = {}, pointers = {}, title = '', subtitle = '', sorted = [], swapping = [] } = opts;
+  const stage = document.getElementById('animStage');
+  const n = arr.length;
+  const cellW = Math.min(60, Math.floor((stage.clientWidth - 60) / Math.max(n, 1)));
+  const maxVal = Math.max(...arr, 1);
+
+  let html = `<div class="h-full flex flex-col">`;
+  if (title) html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">${title}</div>`;
+  if (subtitle) html += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-3">${subtitle}</div>`;
+
+  // Pointer row
+  html += `<div class="relative h-10 flex items-end justify-center gap-1 mb-1">`;
+  arr.forEach((_, i) => {
+    const labels = [];
+    for (const [name, pos] of Object.entries(pointers)) {
+      if (pos === i) labels.push(name);
+    }
+    const label = labels.join(',');
+    html += `<div style="width:${cellW}px" class="flex items-end justify-center">
+      ${label ? `<div class="pointer-label text-brand-600 dark:text-brand-400 flex flex-col items-center">
+        <span class="px-1.5 rounded bg-brand-100 dark:bg-brand-900/60 border border-brand-300 dark:border-brand-600">${label}</span>
+        <i class="fa-solid fa-caret-down text-brand-500 -mt-0.5"></i>
+      </div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Bars
+  html += `<div class="flex items-end justify-center gap-1 mb-2" style="height: 180px;">`;
+  arr.forEach((v, i) => {
+    const h = Math.max(20, (v / maxVal) * 160);
+    let bg = 'linear-gradient(180deg,#60a5fa,#3b82f6)';
+    if (sorted.includes(i)) bg = 'linear-gradient(180deg,#34d399,#10b981)';
+    if (highlights[i] === 'compare') bg = 'linear-gradient(180deg,#fbbf24,#f59e0b)';
+    if (highlights[i] === 'pivot') bg = 'linear-gradient(180deg,#f472b6,#ec4899)';
+    if (highlights[i] === 'found') bg = 'linear-gradient(180deg,#34d399,#10b981)';
+    if (swapping.includes(i)) bg = 'linear-gradient(180deg,#fb7185,#e11d48)';
+    html += `<div class="arr-cell rounded-t-lg flex items-end justify-center text-white text-xs font-bold pb-1"
+      style="width:${cellW}px; height:${h}px; background:${bg}; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+      ${v}
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Index row
+  html += `<div class="flex items-start justify-center gap-1">`;
+  arr.forEach((_, i) => {
+    html += `<div style="width:${cellW}px" class="text-center text-xs text-slate-400 dark:text-slate-500">${i}</div>`;
+  });
+  html += `</div>`;
+
+  html += `</div>`;
+  stage.innerHTML = html;
+}
+
+/* ============================================
+ *  1) BUBBLE SORT
+ * ============================================ */
+Algorithms.bubbleSort = {
+  title: '冒泡排序',
+  icon: 'fa-sort',
+  category: '排序',
+  code: {
+    python: [
+      'def bubble_sort(arr):',
+      '    n = len(arr)',
+      '    for i in range(n):',
+      '        for j in range(0, n - i - 1):',
+      '            if arr[j] > arr[j + 1]:',
+      '                arr[j], arr[j+1] = arr[j+1], arr[j]',
+      '    return arr'
+    ],
+    java: [
+      'public void bubbleSort(int[] arr) {',
+      '    int n = arr.length;',
+      '    for (int i = 0; i < n; i++) {',
+      '        for (int j = 0; j < n - i - 1; j++) {',
+      '            if (arr[j] > arr[j + 1]) {',
+      '                int t = arr[j]; arr[j] = arr[j+1]; arr[j+1] = t;',
+      '            }',
+      '        }',
+      '    }',
+      '}'
+    ],
+    cpp: [
+      'void bubbleSort(vector<int>& arr) {',
+      '    int n = arr.size();',
+      '    for (int i = 0; i < n; i++) {',
+      '        for (int j = 0; j < n - i - 1; j++) {',
+      '            if (arr[j] > arr[j + 1]) {',
+      '                swap(arr[j], arr[j+1]);',
+      '            }',
+      '        }',
+      '    }',
+      '}'
+    ],
+    js: [
+      'function bubbleSort(arr) {',
+      '  const n = arr.length;',
+      '  for (let i = 0; i < n; i++) {',
+      '    for (let j = 0; j < n - i - 1; j++) {',
+      '      if (arr[j] > arr[j + 1]) {',
+      '        [arr[j], arr[j+1]] = [arr[j+1], arr[j]];',
+      '      }',
+      '    }',
+      '  }',
+      '  return arr;',
+      '}'
+    ],
+    go: [
+      'func bubbleSort(arr []int) []int {',
+      '    n := len(arr)',
+      '    for i := 0; i < n; i++ {',
+      '        for j := 0; j < n-i-1; j++ {',
+      '            if arr[j] > arr[j+1] {',
+      '                arr[j], arr[j+1] = arr[j+1], arr[j]',
+      '            }',
+      '        }',
+      '    }',
+      '    return arr',
+      '}'
+    ],
+    c: [
+      'void bubbleSort(int arr[], int n) {',
+      '    for (int i = 0; i < n; i++) {',
+      '        for (int j = 0; j < n - i - 1; j++) {',
+      '            if (arr[j] > arr[j + 1]) {',
+      '                int t = arr[j]; arr[j] = arr[j+1]; arr[j+1] = t;',
+      '            }',
+      '        }',
+      '    }',
+      '}'
+    ]
+  },
+  lineMap: {
+    // python line indices; will be mapped for others via generic mapping
+    python: { init:1, outer:2, inner:3, compare:4, swap:5, end:6 },
+    java:   { init:1, outer:2, inner:3, compare:4, swap:5, end:9 },
+    cpp:    { init:1, outer:2, inner:3, compare:4, swap:5, end:9 },
+    js:     { init:1, outer:2, inner:3, compare:4, swap:5, end:9 },
+    go:     { init:1, outer:2, inner:3, compare:4, swap:5, end:9 },
+    c:      { init:0, outer:1, inner:2, compare:3, swap:4, end:7 },
+  },
+  build() {
+    const arr = [5, 2, 8, 1, 9, 3, 7];
+    const steps = [];
+    const lm = this.lineMap;
+    steps.push({ lineKey:'init', desc:`初始化数组 [${arr.join(', ')}]`, arr:[...arr], sorted:[] });
+    const a = [...arr];
+    const n = a.length;
+    for (let i = 0; i < n; i++) {
+      steps.push({ lineKey:'outer', desc:`外层循环 i=${i}：本轮将最大值冒泡到末尾`, arr:[...a], sorted: range(n-i, n) });
+      for (let j = 0; j < n - i - 1; j++) {
+        steps.push({ lineKey:'inner', desc:`内层 j=${j}`, arr:[...a], sorted: range(n-i, n), pointers:{j:j} });
+        steps.push({ lineKey:'compare', desc:`比较 arr[${j}]=${a[j]} 与 arr[${j+1}]=${a[j+1]}`, arr:[...a], sorted: range(n-i, n), highlights:{[j]:'compare',[j+1]:'compare'}, pointers:{j:j} });
+        if (a[j] > a[j+1]) {
+          [a[j], a[j+1]] = [a[j+1], a[j]];
+          steps.push({ lineKey:'swap', desc:`交换 → [${a.join(', ')}]`, arr:[...a], sorted: range(n-i, n), swapping:[j, j+1], pointers:{j:j} });
+        }
+      }
+    }
+    steps.push({ lineKey:'end', desc:`排序完成 ✓`, arr:[...a], sorted: range(0, n) });
+    return steps;
+  },
+  render(state, lang) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      sorted: state.sorted || [],
+      swapping: state.swapping || [],
+      title: '冒泡排序',
+      subtitle: '相邻元素比较，较大者向后冒泡'
+    });
+  }
+};
+
+function range(a,b){const r=[];for(let i=a;i<b;i++)r.push(i);return r;}
+
+/* ============================================
+ *  2) SELECTION SORT
+ * ============================================ */
+Algorithms.selectionSort = {
+  title: '选择排序',
+  icon: 'fa-arrow-down-wide-short',
+  category: '排序',
+  code: {
+    python: [
+      'def selection_sort(arr):',
+      '    n = len(arr)',
+      '    for i in range(n):',
+      '        min_idx = i',
+      '        for j in range(i+1, n):',
+      '            if arr[j] < arr[min_idx]:',
+      '                min_idx = j',
+      '        arr[i], arr[min_idx] = arr[min_idx], arr[i]',
+      '    return arr'
+    ],
+    java: [
+      'public void selectionSort(int[] arr) {',
+      '    int n = arr.length;',
+      '    for (int i = 0; i < n; i++) {',
+      '        int min = i;',
+      '        for (int j = i+1; j < n; j++) {',
+      '            if (arr[j] < arr[min]) {',
+      '                min = j;',
+      '            }',
+      '        }',
+      '        int t = arr[i]; arr[i] = arr[min]; arr[min] = t;',
+      '    }',
+      '}'
+    ],
+    cpp: [
+      'void selectionSort(vector<int>& arr) {',
+      '    int n = arr.size();',
+      '    for (int i = 0; i < n; i++) {',
+      '        int min = i;',
+      '        for (int j = i+1; j < n; j++) {',
+      '            if (arr[j] < arr[min])',
+      '                min = j;',
+      '        }',
+      '        swap(arr[i], arr[min]);',
+      '    }',
+      '}'
+    ],
+    js: [
+      'function selectionSort(arr) {',
+      '  const n = arr.length;',
+      '  for (let i = 0; i < n; i++) {',
+      '    let min = i;',
+      '    for (let j = i+1; j < n; j++) {',
+      '      if (arr[j] < arr[min]) {',
+      '        min = j;',
+      '      }',
+      '    }',
+      '    [arr[i], arr[min]] = [arr[min], arr[i]];',
+      '  }',
+      '  return arr;',
+      '}'
+    ],
+    go: [
+      'func selectionSort(arr []int) []int {',
+      '    n := len(arr)',
+      '    for i := 0; i < n; i++ {',
+      '        min := i',
+      '        for j := i+1; j < n; j++ {',
+      '            if arr[j] < arr[min] {',
+      '                min = j',
+      '            }',
+      '        }',
+      '        arr[i], arr[min] = arr[min], arr[i]',
+      '    }',
+      '    return arr',
+      '}'
+    ],
+    c: [
+      'void selectionSort(int arr[], int n) {',
+      '    for (int i = 0; i < n; i++) {',
+      '        int min = i;',
+      '        for (int j = i+1; j < n; j++) {',
+      '            if (arr[j] < arr[min])',
+      '                min = j;',
+      '        }',
+      '        int t = arr[i]; arr[i] = arr[min]; arr[min] = t;',
+      '    }',
+      '}'
+    ]
+  },
+  lineMap: {
+    python:{outer:2,setmin:3,inner:4,compare:5,update:6,swap:7,end:8},
+    java:  {outer:2,setmin:3,inner:4,compare:5,update:6,swap:9,end:11},
+    cpp:   {outer:2,setmin:3,inner:4,compare:5,update:6,swap:8,end:10},
+    js:    {outer:2,setmin:3,inner:4,compare:5,update:6,swap:9,end:11},
+    go:    {outer:2,setmin:3,inner:4,compare:5,update:6,swap:9,end:11},
+    c:     {outer:1,setmin:2,inner:3,compare:4,update:5,swap:7,end:9},
+  },
+  build() {
+    const arr = [64, 25, 12, 22, 11, 34];
+    const a = [...arr]; const n = a.length; const steps = [];
+    steps.push({lineKey:'outer', desc:`初始 [${a.join(', ')}]`, arr:[...a], sorted:[]});
+    for (let i = 0; i < n; i++) {
+      steps.push({lineKey:'outer', desc:`第 ${i+1} 轮：寻找 [${i}..${n-1}] 最小值`, arr:[...a], sorted: range(0,i), pointers:{i}});
+      let min = i;
+      steps.push({lineKey:'setmin', desc:`min = ${i}`, arr:[...a], sorted: range(0,i), pointers:{i,min}});
+      for (let j = i+1; j < n; j++) {
+        steps.push({lineKey:'inner', desc:`j=${j}`, arr:[...a], sorted: range(0,i), pointers:{i,min,j}});
+        steps.push({lineKey:'compare', desc:`比较 arr[${j}]=${a[j]} < arr[${min}]=${a[min]} ?`, arr:[...a], sorted:range(0,i), pointers:{i,min,j}, highlights:{[j]:'compare',[min]:'pivot'}});
+        if (a[j] < a[min]) {
+          min = j;
+          steps.push({lineKey:'update', desc:`更新 min = ${j}`, arr:[...a], sorted:range(0,i), pointers:{i,min,j}, highlights:{[min]:'pivot'}});
+        }
+      }
+      if (min !== i) {
+        [a[i], a[min]] = [a[min], a[i]];
+        steps.push({lineKey:'swap', desc:`交换 arr[${i}] 与 arr[${min}]`, arr:[...a], sorted: range(0,i+1), swapping:[i,min]});
+      } else {
+        steps.push({lineKey:'swap', desc:`无需交换`, arr:[...a], sorted: range(0,i+1)});
+      }
+    }
+    steps.push({lineKey:'end', desc:`排序完成 ✓`, arr:[...a], sorted: range(0,n)});
+    return steps;
+  },
+  render(state) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      sorted: state.sorted || [],
+      swapping: state.swapping || [],
+      title: '选择排序',
+      subtitle: '每轮选出剩余部分最小值放到前面'
+    });
+  }
+};
+
+/* ============================================
+ *  3) INSERTION SORT
+ * ============================================ */
+Algorithms.insertionSort = {
+  title: '插入排序',
+  icon: 'fa-arrow-right-to-bracket',
+  category: '排序',
+  code: {
+    python: [
+      'def insertion_sort(arr):',
+      '    for i in range(1, len(arr)):',
+      '        key = arr[i]',
+      '        j = i - 1',
+      '        while j >= 0 and arr[j] > key:',
+      '            arr[j+1] = arr[j]',
+      '            j -= 1',
+      '        arr[j+1] = key',
+      '    return arr'
+    ],
+    java: [
+      'public void insertionSort(int[] arr) {',
+      '    for (int i = 1; i < arr.length; i++) {',
+      '        int key = arr[i];',
+      '        int j = i - 1;',
+      '        while (j >= 0 && arr[j] > key) {',
+      '            arr[j+1] = arr[j];',
+      '            j--;',
+      '        }',
+      '        arr[j+1] = key;',
+      '    }',
+      '}'
+    ],
+    cpp: [
+      'void insertionSort(vector<int>& arr) {',
+      '    for (int i = 1; i < arr.size(); i++) {',
+      '        int key = arr[i];',
+      '        int j = i - 1;',
+      '        while (j >= 0 && arr[j] > key) {',
+      '            arr[j+1] = arr[j];',
+      '            j--;',
+      '        }',
+      '        arr[j+1] = key;',
+      '    }',
+      '}'
+    ],
+    js: [
+      'function insertionSort(arr) {',
+      '  for (let i = 1; i < arr.length; i++) {',
+      '    const key = arr[i];',
+      '    let j = i - 1;',
+      '    while (j >= 0 && arr[j] > key) {',
+      '      arr[j+1] = arr[j];',
+      '      j--;',
+      '    }',
+      '    arr[j+1] = key;',
+      '  }',
+      '  return arr;',
+      '}'
+    ],
+    go: [
+      'func insertionSort(arr []int) []int {',
+      '    for i := 1; i < len(arr); i++ {',
+      '        key := arr[i]',
+      '        j := i - 1',
+      '        for j >= 0 && arr[j] > key {',
+      '            arr[j+1] = arr[j]',
+      '            j--',
+      '        }',
+      '        arr[j+1] = key',
+      '    }',
+      '    return arr',
+      '}'
+    ],
+    c: [
+      'void insertionSort(int arr[], int n) {',
+      '    for (int i = 1; i < n; i++) {',
+      '        int key = arr[i];',
+      '        int j = i - 1;',
+      '        while (j >= 0 && arr[j] > key) {',
+      '            arr[j+1] = arr[j];',
+      '            j--;',
+      '        }',
+      '        arr[j+1] = key;',
+      '    }',
+      '}'
+    ]
+  },
+  lineMap: {
+    python:{outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:7,end:8},
+    java:  {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
+    cpp:   {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
+    js:    {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
+    go:    {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
+    c:     {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
+  },
+  build() {
+    const a = [5, 3, 8, 4, 2]; const n = a.length; const steps = [];
+    steps.push({lineKey:'outer', desc:`初始 [${a.join(', ')}]`, arr:[...a], sorted:[0]});
+    for (let i = 1; i < n; i++) {
+      const key = a[i];
+      steps.push({lineKey:'outer', desc:`i=${i}`, arr:[...a], sorted:range(0,i), pointers:{i}});
+      steps.push({lineKey:'key', desc:`取 key = arr[${i}] = ${key}`, arr:[...a], sorted:range(0,i), pointers:{i}, highlights:{[i]:'pivot'}});
+      let j = i - 1;
+      steps.push({lineKey:'setj', desc:`j = ${j}`, arr:[...a], sorted:range(0,i), pointers:{i,j}, highlights:{[i]:'pivot'}});
+      while (j >= 0 && a[j] > key) {
+        steps.push({lineKey:'while', desc:`arr[${j}]=${a[j]} > key=${key}，需后移`, arr:[...a], sorted:range(0,i), pointers:{i,j}, highlights:{[j]:'compare',[i]:'pivot'}});
+        a[j+1] = a[j];
+        steps.push({lineKey:'shift', desc:`arr[${j+1}] ← arr[${j}]`, arr:[...a], sorted:range(0,i), pointers:{i,j}, highlights:{[j+1]:'compare'}});
+        j--;
+        steps.push({lineKey:'dec', desc:`j = ${j}`, arr:[...a], sorted:range(0,i), pointers:{i,j:Math.max(j,0)}});
+      }
+      a[j+1] = key;
+      steps.push({lineKey:'insert', desc:`插入 key 到 arr[${j+1}]`, arr:[...a], sorted:range(0,i+1), highlights:{[j+1]:'found'}});
+    }
+    steps.push({lineKey:'end', desc:`排序完成 ✓`, arr:[...a], sorted:range(0,n)});
+    return steps;
+  },
+  render(state) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      sorted: state.sorted || [],
+      title: '插入排序',
+      subtitle: '把当前元素插入到前面已排序序列中'
+    });
+  }
+};
+
+/* ============================================
+ *  4) QUICK SORT
+ * ============================================ */
+Algorithms.quickSort = {
+  title: '快速排序',
+  icon: 'fa-bolt',
+  category: '排序',
+  code: {
+    python: [
+      'def quick_sort(arr, lo, hi):',
+      '    if lo >= hi: return',
+      '    pivot = arr[hi]',
+      '    i = lo - 1',
+      '    for j in range(lo, hi):',
+      '        if arr[j] <= pivot:',
+      '            i += 1',
+      '            arr[i], arr[j] = arr[j], arr[i]',
+      '    arr[i+1], arr[hi] = arr[hi], arr[i+1]',
+      '    p = i + 1',
+      '    quick_sort(arr, lo, p-1)',
+      '    quick_sort(arr, p+1, hi)'
+    ],
+    java: [
+      'void quickSort(int[] arr, int lo, int hi) {',
+      '    if (lo >= hi) return;',
+      '    int pivot = arr[hi];',
+      '    int i = lo - 1;',
+      '    for (int j = lo; j < hi; j++) {',
+      '        if (arr[j] <= pivot) {',
+      '            i++;',
+      '            int t = arr[i]; arr[i]=arr[j]; arr[j]=t;',
+      '        }',
+      '    }',
+      '    int t = arr[i+1]; arr[i+1]=arr[hi]; arr[hi]=t;',
+      '    int p = i + 1;',
+      '    quickSort(arr, lo, p-1);',
+      '    quickSort(arr, p+1, hi);',
+      '}'
+    ],
+    cpp: [
+      'void quickSort(vector<int>& arr, int lo, int hi) {',
+      '    if (lo >= hi) return;',
+      '    int pivot = arr[hi];',
+      '    int i = lo - 1;',
+      '    for (int j = lo; j < hi; j++) {',
+      '        if (arr[j] <= pivot) {',
+      '            i++;',
+      '            swap(arr[i], arr[j]);',
+      '        }',
+      '    }',
+      '    swap(arr[i+1], arr[hi]);',
+      '    int p = i + 1;',
+      '    quickSort(arr, lo, p-1);',
+      '    quickSort(arr, p+1, hi);',
+      '}'
+    ],
+    js: [
+      'function quickSort(arr, lo, hi) {',
+      '  if (lo >= hi) return;',
+      '  const pivot = arr[hi];',
+      '  let i = lo - 1;',
+      '  for (let j = lo; j < hi; j++) {',
+      '    if (arr[j] <= pivot) {',
+      '      i++;',
+      '      [arr[i], arr[j]] = [arr[j], arr[i]];',
+      '    }',
+      '  }',
+      '  [arr[i+1], arr[hi]] = [arr[hi], arr[i+1]];',
+      '  const p = i + 1;',
+      '  quickSort(arr, lo, p-1);',
+      '  quickSort(arr, p+1, hi);',
+      '}'
+    ],
+    go: [
+      'func quickSort(arr []int, lo, hi int) {',
+      '    if lo >= hi { return }',
+      '    pivot := arr[hi]',
+      '    i := lo - 1',
+      '    for j := lo; j < hi; j++ {',
+      '        if arr[j] <= pivot {',
+      '            i++',
+      '            arr[i], arr[j] = arr[j], arr[i]',
+      '        }',
+      '    }',
+      '    arr[i+1], arr[hi] = arr[hi], arr[i+1]',
+      '    p := i + 1',
+      '    quickSort(arr, lo, p-1)',
+      '    quickSort(arr, p+1, hi)',
+      '}'
+    ],
+    c: [
+      'void quickSort(int arr[], int lo, int hi) {',
+      '    if (lo >= hi) return;',
+      '    int pivot = arr[hi];',
+      '    int i = lo - 1;',
+      '    for (int j = lo; j < hi; j++) {',
+      '        if (arr[j] <= pivot) {',
+      '            i++;',
+      '            int t=arr[i]; arr[i]=arr[j]; arr[j]=t;',
+      '        }',
+      '    }',
+      '    int t=arr[i+1]; arr[i+1]=arr[hi]; arr[hi]=t;',
+      '    int p = i + 1;',
+      '    quickSort(arr, lo, p-1);',
+      '    quickSort(arr, p+1, hi);',
+      '}'
+    ]
+  },
+  lineMap: {
+    python:{check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:8,p:9,rec1:10,rec2:11},
+    java:  {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
+    cpp:   {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
+    js:    {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
+    go:    {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
+    c:     {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
+  },
+  build() {
+    const a = [3, 6, 8, 1, 5, 4]; const steps = []; const lm = this.lineMap;
+    const sorted = new Set();
+    steps.push({lineKey:'check', desc:`初始 [${a.join(', ')}]`, arr:[...a], sorted:[]});
+    function qs(lo, hi) {
+      if (lo >= hi) {
+        if (lo === hi) sorted.add(lo);
+        steps.push({lineKey:'check', desc:`区间 [${lo},${hi}] 已有序`, arr:[...a], sorted:[...sorted]});
+        return;
+      }
+      steps.push({lineKey:'check', desc:`对区间 [${lo},${hi}] 进行划分`, arr:[...a], sorted:[...sorted], pointers:{lo,hi}});
+      const pivot = a[hi];
+      steps.push({lineKey:'pivot', desc:`选择基准 pivot = arr[${hi}] = ${pivot}`, arr:[...a], sorted:[...sorted], pointers:{lo,hi,pivot:hi}, highlights:{[hi]:'pivot'}});
+      let i = lo - 1;
+      steps.push({lineKey:'seti', desc:`i = ${i}`, arr:[...a], sorted:[...sorted], pointers:{lo,hi,pivot:hi}, highlights:{[hi]:'pivot'}});
+      for (let j = lo; j < hi; j++) {
+        steps.push({lineKey:'loop', desc:`j = ${j}`, arr:[...a], sorted:[...sorted], pointers:{i:Math.max(i,lo),j,pivot:hi}, highlights:{[hi]:'pivot'}});
+        steps.push({lineKey:'cmp', desc:`比较 arr[${j}]=${a[j]} <= pivot=${pivot}?`, arr:[...a], sorted:[...sorted], pointers:{i:Math.max(i,lo),j,pivot:hi}, highlights:{[hi]:'pivot',[j]:'compare'}});
+        if (a[j] <= pivot) {
+          i++;
+          steps.push({lineKey:'inc', desc:`i = ${i}`, arr:[...a], sorted:[...sorted], pointers:{i,j,pivot:hi}, highlights:{[hi]:'pivot'}});
+          if (i !== j) {
+            [a[i], a[j]] = [a[j], a[i]];
+          }
+          steps.push({lineKey:'swap', desc:`交换 arr[${i}] 与 arr[${j}]`, arr:[...a], sorted:[...sorted], pointers:{i,j,pivot:hi}, swapping:[i,j], highlights:{[hi]:'pivot'}});
+        }
+      }
+      [a[i+1], a[hi]] = [a[hi], a[i+1]];
+      steps.push({lineKey:'place', desc:`将 pivot 放到正确位置 ${i+1}`, arr:[...a], sorted:[...sorted], pointers:{pivot:i+1}, swapping:[i+1,hi]});
+      sorted.add(i+1);
+      const p = i + 1;
+      steps.push({lineKey:'p', desc:`p = ${p}`, arr:[...a], sorted:[...sorted], pointers:{p}});
+      steps.push({lineKey:'rec1', desc:`递归左边 [${lo},${p-1}]`, arr:[...a], sorted:[...sorted]});
+      qs(lo, p-1);
+      steps.push({lineKey:'rec2', desc:`递归右边 [${p+1},${hi}]`, arr:[...a], sorted:[...sorted]});
+      qs(p+1, hi);
+    }
+    qs(0, a.length-1);
+    steps.push({lineKey:'check', desc:`快速排序完成 ✓`, arr:[...a], sorted: range(0, a.length)});
+    return steps;
+  },
+  render(state) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      sorted: state.sorted || [],
+      swapping: state.swapping || [],
+      title: '快速排序',
+      subtitle: '选择基准，分区后递归处理左右子区间'
+    });
+  }
+};
+
+/* ============================================
+ *  5) MERGE SORT
+ * ============================================ */
+Algorithms.mergeSort = {
+  title: '归并排序',
+  icon: 'fa-layer-group',
+  category: '排序',
+  code: {
+    python: [
+      'def merge_sort(arr, l, r):',
+      '    if l >= r: return',
+      '    m = (l + r) // 2',
+      '    merge_sort(arr, l, m)',
+      '    merge_sort(arr, m+1, r)',
+      '    merge(arr, l, m, r)',
+      '',
+      'def merge(arr, l, m, r):',
+      '    tmp = []',
+      '    i, j = l, m + 1',
+      '    while i <= m and j <= r:',
+      '        if arr[i] <= arr[j]:',
+      '            tmp.append(arr[i]); i += 1',
+      '        else:',
+      '            tmp.append(arr[j]); j += 1',
+      '    while i <= m: tmp.append(arr[i]); i += 1',
+      '    while j <= r: tmp.append(arr[j]); j += 1',
+      '    for k in range(len(tmp)):',
+      '        arr[l+k] = tmp[k]'
+    ],
+    java: [
+      'void mergeSort(int[] arr, int l, int r) {',
+      '    if (l >= r) return;',
+      '    int m = (l + r) / 2;',
+      '    mergeSort(arr, l, m);',
+      '    mergeSort(arr, m+1, r);',
+      '    merge(arr, l, m, r);',
+      '}',
+      'void merge(int[] arr, int l, int m, int r) {',
+      '    int[] tmp = new int[r-l+1];',
+      '    int i = l, j = m+1, k = 0;',
+      '    while (i <= m && j <= r) {',
+      '        if (arr[i] <= arr[j]) tmp[k++] = arr[i++];',
+      '        else tmp[k++] = arr[j++];',
+      '    }',
+      '    while (i <= m) tmp[k++] = arr[i++];',
+      '    while (j <= r) tmp[k++] = arr[j++];',
+      '    for (int x = 0; x < tmp.length; x++)',
+      '        arr[l+x] = tmp[x];',
+      '}'
+    ],
+    cpp: [
+      'void merge(vector<int>& a,int l,int m,int r){',
+      '    vector<int> tmp;',
+      '    int i=l, j=m+1;',
+      '    while(i<=m && j<=r){',
+      '        if(a[i]<=a[j]) tmp.push_back(a[i++]);',
+      '        else tmp.push_back(a[j++]);',
+      '    }',
+      '    while(i<=m) tmp.push_back(a[i++]);',
+      '    while(j<=r) tmp.push_back(a[j++]);',
+      '    for(int k=0;k<tmp.size();k++) a[l+k]=tmp[k];',
+      '}',
+      'void mergeSort(vector<int>& a,int l,int r){',
+      '    if(l>=r) return;',
+      '    int m=(l+r)/2;',
+      '    mergeSort(a,l,m);',
+      '    mergeSort(a,m+1,r);',
+      '    merge(a,l,m,r);',
+      '}'
+    ],
+    js: [
+      'function mergeSort(arr, l, r) {',
+      '  if (l >= r) return;',
+      '  const m = (l + r) >> 1;',
+      '  mergeSort(arr, l, m);',
+      '  mergeSort(arr, m+1, r);',
+      '  merge(arr, l, m, r);',
+      '}',
+      'function merge(arr, l, m, r) {',
+      '  const tmp = [];',
+      '  let i = l, j = m + 1;',
+      '  while (i <= m && j <= r) {',
+      '    if (arr[i] <= arr[j]) tmp.push(arr[i++]);',
+      '    else tmp.push(arr[j++]);',
+      '  }',
+      '  while (i <= m) tmp.push(arr[i++]);',
+      '  while (j <= r) tmp.push(arr[j++]);',
+      '  for (let k = 0; k < tmp.length; k++)',
+      '    arr[l+k] = tmp[k];',
+      '}'
+    ],
+    go: [
+      'func mergeSort(a []int, l, r int) {',
+      '    if l >= r { return }',
+      '    m := (l + r) / 2',
+      '    mergeSort(a, l, m)',
+      '    mergeSort(a, m+1, r)',
+      '    merge(a, l, m, r)',
+      '}',
+      'func merge(a []int, l, m, r int) {',
+      '    tmp := []int{}',
+      '    i, j := l, m+1',
+      '    for i <= m && j <= r {',
+      '        if a[i] <= a[j] { tmp = append(tmp, a[i]); i++',
+      '        } else { tmp = append(tmp, a[j]); j++ }',
+      '    }',
+      '    for ; i <= m; i++ { tmp = append(tmp, a[i]) }',
+      '    for ; j <= r; j++ { tmp = append(tmp, a[j]) }',
+      '    for k := 0; k < len(tmp); k++ { a[l+k] = tmp[k] }',
+      '}'
+    ],
+    c: [
+      'void merge(int a[], int l, int m, int r){',
+      '    int tmp[100]; int k=0, i=l, j=m+1;',
+      '    while(i<=m && j<=r){',
+      '        if(a[i]<=a[j]) tmp[k++]=a[i++];',
+      '        else tmp[k++]=a[j++];',
+      '    }',
+      '    while(i<=m) tmp[k++]=a[i++];',
+      '    while(j<=r) tmp[k++]=a[j++];',
+      '    for(int x=0;x<k;x++) a[l+x]=tmp[x];',
+      '}',
+      'void mergeSort(int a[], int l, int r){',
+      '    if(l>=r) return;',
+      '    int m=(l+r)/2;',
+      '    mergeSort(a,l,m);',
+      '    mergeSort(a,m+1,r);',
+      '    merge(a,l,m,r);',
+      '}'
+    ]
+  },
+  // we'll keep line map simple: always highlight a representative line
+  build() {
+    const a = [8, 3, 5, 1, 7, 2]; const steps = [];
+    const sortedRanges = [];
+    function ms(l, r) {
+      if (l >= r) {
+        steps.push({line:1, desc:`区间 [${l},${r}] 无需排序`, arr:[...a], range:[l,r]});
+        return;
+      }
+      steps.push({line:1, desc:`划分区间 [${l},${r}]`, arr:[...a], range:[l,r]});
+      const m = (l + r) >> 1;
+      steps.push({line:2, desc:`中点 m = ${m}`, arr:[...a], range:[l,r], mid:m});
+      steps.push({line:3, desc:`递归左半 [${l},${m}]`, arr:[...a], range:[l,m]});
+      ms(l, m);
+      steps.push({line:4, desc:`递归右半 [${m+1},${r}]`, arr:[...a], range:[m+1,r]});
+      ms(m+1, r);
+      steps.push({line:5, desc:`合并 [${l},${m}] 与 [${m+1},${r}]`, arr:[...a], range:[l,r], mid:m});
+      // merge
+      const tmp = []; let i = l, j = m + 1;
+      while (i <= m && j <= r) {
+        steps.push({line:11, desc:`比较 arr[${i}]=${a[i]} 与 arr[${j}]=${a[j]}`, arr:[...a], range:[l,r], mid:m, pointers:{i,j}, highlights:{[i]:'compare',[j]:'compare'}});
+        if (a[i] <= a[j]) { tmp.push(a[i++]); }
+        else { tmp.push(a[j++]); }
+      }
+      while (i <= m) tmp.push(a[i++]);
+      while (j <= r) tmp.push(a[j++]);
+      for (let k = 0; k < tmp.length; k++) a[l+k] = tmp[k];
+      steps.push({line:17, desc:`写回 [${l},${r}] → [${a.slice(l,r+1).join(', ')}]`, arr:[...a], range:[l,r], sortedRange:[l,r]});
+    }
+    ms(0, a.length-1);
+    steps.push({line:0, desc:`归并排序完成 ✓`, arr:[...a], sorted: range(0, a.length)});
+    return steps;
+  },
+  render(state) {
+    const a = state.arr; const n = a.length;
+    const stage = document.getElementById('animStage');
+    const cellW = Math.min(60, Math.floor((stage.clientWidth - 60) / Math.max(n,1)));
+    const maxVal = Math.max(...a, 1);
+    const [l, r] = state.range || [-1, -1];
+    let html = `<div class="h-full flex flex-col">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">归并排序</div>`;
+    html += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-3">分治法：递归拆分 → 合并有序序列</div>`;
+    html += `<div class="flex items-end justify-center gap-1 mb-2" style="height:180px">`;
+    a.forEach((v, i) => {
+      const h = Math.max(20, v/maxVal*160);
+      let bg = 'linear-gradient(180deg,#cbd5e1,#94a3b8)';
+      if (i >= l && i <= r) bg = 'linear-gradient(180deg,#60a5fa,#3b82f6)';
+      if (state.mid != null && i === state.mid) bg = 'linear-gradient(180deg,#f472b6,#ec4899)';
+      if (state.highlights && state.highlights[i] === 'compare') bg = 'linear-gradient(180deg,#fbbf24,#f59e0b)';
+      if (state.sorted && state.sorted.includes(i)) bg = 'linear-gradient(180deg,#34d399,#10b981)';
+      html += `<div class="arr-cell rounded-t-lg flex items-end justify-center text-white text-xs font-bold pb-1"
+        style="width:${cellW}px; height:${h}px; background:${bg}; box-shadow:0 4px 12px rgba(0,0,0,0.08);">${v}</div>`;
+    });
+    html += `</div>`;
+    html += `<div class="flex items-start justify-center gap-1">`;
+    a.forEach((_, i) => { html += `<div style="width:${cellW}px" class="text-center text-xs text-slate-400 dark:text-slate-500">${i}</div>`; });
+    html += `</div></div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  6) BINARY SEARCH
+ * ============================================ */
+Algorithms.binarySearch = {
+  title: '二分查找',
+  icon: 'fa-magnifying-glass-chart',
+  category: '查找',
+  code: {
+    python: [
+      'def binary_search(arr, target):',
+      '    l, r = 0, len(arr) - 1',
+      '    while l <= r:',
+      '        m = (l + r) // 2',
+      '        if arr[m] == target:',
+      '            return m',
+      '        elif arr[m] < target:',
+      '            l = m + 1',
+      '        else:',
+      '            r = m - 1',
+      '    return -1'
+    ],
+    java: [
+      'int binarySearch(int[] arr, int target) {',
+      '    int l = 0, r = arr.length - 1;',
+      '    while (l <= r) {',
+      '        int m = (l + r) / 2;',
+      '        if (arr[m] == target) return m;',
+      '        else if (arr[m] < target) l = m + 1;',
+      '        else r = m - 1;',
+      '    }',
+      '    return -1;',
+      '}'
+    ],
+    cpp: [
+      'int binarySearch(vector<int>& arr, int target) {',
+      '    int l = 0, r = arr.size() - 1;',
+      '    while (l <= r) {',
+      '        int m = (l + r) / 2;',
+      '        if (arr[m] == target) return m;',
+      '        else if (arr[m] < target) l = m + 1;',
+      '        else r = m - 1;',
+      '    }',
+      '    return -1;',
+      '}'
+    ],
+    js: [
+      'function binarySearch(arr, target) {',
+      '  let l = 0, r = arr.length - 1;',
+      '  while (l <= r) {',
+      '    const m = (l + r) >> 1;',
+      '    if (arr[m] === target) return m;',
+      '    else if (arr[m] < target) l = m + 1;',
+      '    else r = m - 1;',
+      '  }',
+      '  return -1;',
+      '}'
+    ],
+    go: [
+      'func binarySearch(arr []int, target int) int {',
+      '    l, r := 0, len(arr)-1',
+      '    for l <= r {',
+      '        m := (l + r) / 2',
+      '        if arr[m] == target { return m }',
+      '        if arr[m] < target { l = m + 1',
+      '        } else { r = m - 1 }',
+      '    }',
+      '    return -1',
+      '}'
+    ],
+    c: [
+      'int binarySearch(int arr[], int n, int target) {',
+      '    int l = 0, r = n - 1;',
+      '    while (l <= r) {',
+      '        int m = (l + r) / 2;',
+      '        if (arr[m] == target) return m;',
+      '        else if (arr[m] < target) l = m + 1;',
+      '        else r = m - 1;',
+      '    }',
+      '    return -1;',
+      '}'
+    ]
+  },
+  lineMap: {
+    python:{init:1,loop:2,mid:3,eq:4,ret:5,less:6,moveL:7,more:8,moveR:9,notfound:10},
+    java:  {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
+    cpp:   {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
+    js:    {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
+    go:    {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
+    c:     {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
+  },
+  build() {
+    const arr = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+    const target = 13; const steps = [];
+    steps.push({lineKey:'init', desc:`初始化 l=0, r=${arr.length-1}，查找 target=${target}`, arr, pointers:{l:0, r:arr.length-1}});
+    let l = 0, r = arr.length - 1;
+    while (l <= r) {
+      steps.push({lineKey:'loop', desc:`l=${l} <= r=${r}，继续`, arr, pointers:{l, r}});
+      const m = (l + r) >> 1;
+      steps.push({lineKey:'mid', desc:`m = (${l}+${r})/2 = ${m}`, arr, pointers:{l, m, r}, highlights:{[m]:'pivot'}});
+      steps.push({lineKey:'eq', desc:`arr[${m}]=${arr[m]} == ${target}?`, arr, pointers:{l, m, r}, highlights:{[m]:'compare'}});
+      if (arr[m] === target) {
+        steps.push({lineKey:'ret', desc:`找到！返回 ${m}`, arr, pointers:{l, m, r}, highlights:{[m]:'found'}});
+        return steps;
+      } else if (arr[m] < target) {
+        steps.push({lineKey:'less', desc:`arr[${m}]=${arr[m]} < ${target}，搜索右半`, arr, pointers:{l, m, r}, highlights:{[m]:'compare'}});
+        l = m + 1;
+        steps.push({lineKey:'moveL', desc:`l = ${l}`, arr, pointers:{l, r}});
+      } else {
+        steps.push({lineKey:'more', desc:`arr[${m}]=${arr[m]} > ${target}，搜索左半`, arr, pointers:{l, m, r}, highlights:{[m]:'compare'}});
+        r = m - 1;
+        steps.push({lineKey:'moveR', desc:`r = ${r}`, arr, pointers:{l, r}});
+      }
+    }
+    steps.push({lineKey:'notfound', desc:`未找到，返回 -1`, arr, pointers:{l, r}});
+    return steps;
+  },
+  render(state) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      title: '二分查找',
+      subtitle: '每次将搜索区间缩小一半 · target = 13'
+    });
+  }
+};
+
+/* ============================================
+ *  7) LINEAR SEARCH
+ * ============================================ */
+Algorithms.linearSearch = {
+  title: '线性查找',
+  icon: 'fa-magnifying-glass',
+  category: '查找',
+  code: {
+    python: [
+      'def linear_search(arr, target):',
+      '    for i in range(len(arr)):',
+      '        if arr[i] == target:',
+      '            return i',
+      '    return -1'
+    ],
+    java: [
+      'int linearSearch(int[] arr, int target) {',
+      '    for (int i = 0; i < arr.length; i++) {',
+      '        if (arr[i] == target) return i;',
+      '    }',
+      '    return -1;',
+      '}'
+    ],
+    cpp: [
+      'int linearSearch(vector<int>& arr, int target) {',
+      '    for (int i = 0; i < arr.size(); i++) {',
+      '        if (arr[i] == target) return i;',
+      '    }',
+      '    return -1;',
+      '}'
+    ],
+    js: [
+      'function linearSearch(arr, target) {',
+      '  for (let i = 0; i < arr.length; i++) {',
+      '    if (arr[i] === target) return i;',
+      '  }',
+      '  return -1;',
+      '}'
+    ],
+    go: [
+      'func linearSearch(arr []int, target int) int {',
+      '    for i := 0; i < len(arr); i++ {',
+      '        if arr[i] == target { return i }',
+      '    }',
+      '    return -1',
+      '}'
+    ],
+    c: [
+      'int linearSearch(int arr[], int n, int target) {',
+      '    for (int i = 0; i < n; i++) {',
+      '        if (arr[i] == target) return i;',
+      '    }',
+      '    return -1;',
+      '}'
+    ]
+  },
+  lineMap: {
+    python:{loop:1,check:2,found:3,notfound:4},
+    java:{loop:1,check:2,found:2,notfound:4},
+    cpp:{loop:1,check:2,found:2,notfound:4},
+    js:{loop:1,check:2,found:2,notfound:4},
+    go:{loop:1,check:2,found:2,notfound:4},
+    c:{loop:1,check:2,found:2,notfound:4},
+  },
+  build() {
+    const arr = [7, 3, 9, 1, 5, 8, 4]; const target = 5; const steps = [];
+    for (let i = 0; i < arr.length; i++) {
+      steps.push({lineKey:'loop', desc:`i = ${i}`, arr, pointers:{i}});
+      steps.push({lineKey:'check', desc:`arr[${i}]=${arr[i]} == ${target}?`, arr, pointers:{i}, highlights:{[i]:'compare'}});
+      if (arr[i] === target) {
+        steps.push({lineKey:'found', desc:`找到！返回 ${i}`, arr, pointers:{i}, highlights:{[i]:'found'}});
+        return steps;
+      }
+    }
+    steps.push({lineKey:'notfound', desc:`未找到，返回 -1`, arr});
+    return steps;
+  },
+  render(state) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      title: '线性查找',
+      subtitle: '从左到右依次比较 · target = 5'
+    });
+  }
+};
+
+/* ============================================
+ *  8) STACK
+ * ============================================ */
+Algorithms.stack = {
+  title: '栈 Stack',
+  icon: 'fa-layer-group',
+  category: '数据结构',
+  code: {
+    python: [
+      'stack = []',
+      'stack.append(10)  # push',
+      'stack.append(20)',
+      'stack.append(30)',
+      'top = stack[-1]   # peek',
+      'x = stack.pop()   # pop',
+      'y = stack.pop()',
+      'print(stack)'
+    ],
+    java: [
+      'Deque<Integer> stack = new ArrayDeque<>();',
+      'stack.push(10);',
+      'stack.push(20);',
+      'stack.push(30);',
+      'int top = stack.peek();',
+      'int x = stack.pop();',
+      'int y = stack.pop();',
+      'System.out.println(stack);'
+    ],
+    cpp: [
+      'stack<int> s;',
+      's.push(10);',
+      's.push(20);',
+      's.push(30);',
+      'int top = s.top();',
+      's.pop();',
+      's.pop();',
+      '// size = ' + '1'
+    ],
+    js: [
+      'const stack = [];',
+      'stack.push(10);',
+      'stack.push(20);',
+      'stack.push(30);',
+      'const top = stack[stack.length-1];',
+      'const x = stack.pop();',
+      'const y = stack.pop();',
+      'console.log(stack);'
+    ],
+    go: [
+      'stack := []int{}',
+      'stack = append(stack, 10)',
+      'stack = append(stack, 20)',
+      'stack = append(stack, 30)',
+      'top := stack[len(stack)-1]',
+      'stack = stack[:len(stack)-1]',
+      'stack = stack[:len(stack)-1]',
+      'fmt.Println(stack)'
+    ],
+    c: [
+      'int stack[100]; int top = -1;',
+      'stack[++top] = 10;',
+      'stack[++top] = 20;',
+      'stack[++top] = 30;',
+      'int peek = stack[top];',
+      'int x = stack[top--];',
+      'int y = stack[top--];',
+      '// top = 0'
+    ]
+  },
+  build() {
+    return [
+      {line:0, desc:`初始化空栈`, stack:[], action:'init'},
+      {line:1, desc:`push(10)`, stack:[10], action:'push', value:10},
+      {line:2, desc:`push(20)`, stack:[10,20], action:'push', value:20},
+      {line:3, desc:`push(30)`, stack:[10,20,30], action:'push', value:30},
+      {line:4, desc:`peek() → 查看栈顶 = 30`, stack:[10,20,30], action:'peek'},
+      {line:5, desc:`pop() → 弹出 30`, stack:[10,20], action:'pop', value:30},
+      {line:6, desc:`pop() → 弹出 20`, stack:[10], action:'pop', value:20},
+      {line:7, desc:`当前栈：[10]`, stack:[10], action:'done'}
+    ];
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const s = state.stack || [];
+    let html = `<div class="h-full flex flex-col items-center justify-center">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-2">栈 Stack (LIFO)</div>`;
+    html += `<div class="text-xs text-slate-500 dark:text-slate-400 mb-4">后进先出 · 仅在栈顶操作</div>`;
+
+    html += `<div class="flex items-end gap-4">`;
+    // Stack visualization
+    html += `<div class="flex flex-col-reverse items-center gap-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl p-3 border-2 border-dashed border-slate-300 dark:border-slate-600" style="min-height:260px; min-width:120px;">`;
+    s.forEach((v, i) => {
+      let bg = 'linear-gradient(135deg,#60a5fa,#3b82f6)';
+      if (i === s.length - 1 && (state.action === 'push' || state.action === 'peek')) bg = 'linear-gradient(135deg,#fbbf24,#f59e0b)';
+      html += `<div class="arr-cell rounded-lg px-6 py-3 text-white font-bold shadow-lg" style="background:${bg}; min-width:80px; text-align:center;">${v}</div>`;
+    });
+    if (s.length === 0) {
+      html += `<div class="text-slate-400 dark:text-slate-500 text-sm italic">空栈</div>`;
+    }
+    html += `</div>`;
+
+    // TOP indicator
+    html += `<div class="flex flex-col items-center gap-2 ml-4" style="margin-bottom: ${s.length*48 - 20}px;">`;
+    if (s.length > 0) {
+      html += `<div class="px-3 py-1 rounded-lg bg-rose-500 text-white text-xs font-bold shadow">TOP</div>`;
+      html += `<i class="fa-solid fa-arrow-left text-rose-500 text-xl"></i>`;
+    }
+    html += `</div>`;
+    html += `</div>`;
+
+    if (state.action === 'pop' && state.value != null) {
+      html += `<div class="mt-4 px-4 py-2 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-sm font-medium">
+        <i class="fa-solid fa-arrow-up"></i> 弹出: ${state.value}</div>`;
+    }
+    html += `</div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  9) QUEUE
+ * ============================================ */
+Algorithms.queue = {
+  title: '队列 Queue',
+  icon: 'fa-people-line',
+  category: '数据结构',
+  code: {
+    python: [
+      'from collections import deque',
+      'q = deque()',
+      'q.append(10)    # enqueue',
+      'q.append(20)',
+      'q.append(30)',
+      'x = q.popleft() # dequeue',
+      'y = q.popleft()',
+      'print(q)'
+    ],
+    java: [
+      'Queue<Integer> q = new LinkedList<>();',
+      'q.offer(10);',
+      'q.offer(20);',
+      'q.offer(30);',
+      'int x = q.poll();',
+      'int y = q.poll();',
+      'System.out.println(q);',
+      '// [30]'
+    ],
+    cpp: [
+      'queue<int> q;',
+      'q.push(10);',
+      'q.push(20);',
+      'q.push(30);',
+      'q.pop();',
+      'q.pop();',
+      '// front = 30',
+      '// size  = 1'
+    ],
+    js: [
+      'const q = [];',
+      'q.push(10);',
+      'q.push(20);',
+      'q.push(30);',
+      'const x = q.shift();',
+      'const y = q.shift();',
+      'console.log(q);',
+      '// [30]'
+    ],
+    go: [
+      'q := []int{}',
+      'q = append(q, 10)',
+      'q = append(q, 20)',
+      'q = append(q, 30)',
+      'x := q[0]; q = q[1:]',
+      'y := q[0]; q = q[1:]',
+      'fmt.Println(q)',
+      '// [30]'
+    ],
+    c: [
+      'int q[100]; int front=0, rear=0;',
+      'q[rear++] = 10;',
+      'q[rear++] = 20;',
+      'q[rear++] = 30;',
+      'int x = q[front++];',
+      'int y = q[front++];',
+      '// front=2, rear=3',
+      '// remaining: 30'
+    ]
+  },
+  build() {
+    return [
+      {line:1, desc:`初始化空队列`, q:[], action:'init'},
+      {line:2, desc:`enqueue(10) 从队尾入队`, q:[10], action:'enq', value:10},
+      {line:3, desc:`enqueue(20)`, q:[10,20], action:'enq', value:20},
+      {line:4, desc:`enqueue(30)`, q:[10,20,30], action:'enq', value:30},
+      {line:5, desc:`dequeue() 从队首出队 → 10`, q:[20,30], action:'deq', value:10},
+      {line:6, desc:`dequeue() → 20`, q:[30], action:'deq', value:20},
+      {line:7, desc:`当前队列：[30]`, q:[30], action:'done'}
+    ];
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const q = state.q || [];
+    let html = `<div class="h-full flex flex-col items-center justify-center">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-2">队列 Queue (FIFO)</div>`;
+    html += `<div class="text-xs text-slate-500 dark:text-slate-400 mb-6">先进先出 · 队尾入队，队首出队</div>`;
+
+    html += `<div class="flex items-center gap-3">`;
+    // FRONT label
+    html += `<div class="flex flex-col items-center gap-1"><div class="px-2 py-1 rounded bg-emerald-500 text-white text-[10px] font-bold">FRONT</div><i class="fa-solid fa-arrow-right text-emerald-500"></i></div>`;
+
+    // Queue cells
+    html += `<div class="flex gap-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl p-3 border-2 border-dashed border-slate-300 dark:border-slate-600" style="min-height:70px; min-width:300px; align-items:center;">`;
+    q.forEach((v, i) => {
+      let bg = 'linear-gradient(135deg,#60a5fa,#3b82f6)';
+      if (i === 0 && state.action === 'deq') bg = 'linear-gradient(135deg,#fb7185,#e11d48)';
+      if (i === q.length-1 && state.action === 'enq') bg = 'linear-gradient(135deg,#fbbf24,#f59e0b)';
+      html += `<div class="arr-cell rounded-lg px-5 py-2 text-white font-bold shadow-lg" style="background:${bg}; min-width:60px; text-align:center;">${v}</div>`;
+    });
+    if (q.length === 0) html += `<div class="text-slate-400 italic text-sm w-full text-center">空队列</div>`;
+    html += `</div>`;
+
+    html += `<div class="flex flex-col items-center gap-1"><i class="fa-solid fa-arrow-left text-rose-500"></i><div class="px-2 py-1 rounded bg-rose-500 text-white text-[10px] font-bold">REAR</div></div>`;
+    html += `</div>`;
+
+    if (state.action === 'enq') {
+      html += `<div class="mt-4 px-4 py-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-sm font-medium">入队: ${state.value}</div>`;
+    } else if (state.action === 'deq') {
+      html += `<div class="mt-4 px-4 py-2 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-sm font-medium">出队: ${state.value}</div>`;
+    }
+    html += `</div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  10) LINKED LIST
+ * ============================================ */
+Algorithms.linkedList = {
+  title: '链表 LinkedList',
+  icon: 'fa-link',
+  category: '数据结构',
+  code: {
+    python: [
+      'class Node:',
+      '    def __init__(self, val):',
+      '        self.val = val',
+      '        self.next = None',
+      '',
+      'head = Node(1)',
+      'head.next = Node(2)',
+      'head.next.next = Node(3)',
+      'head.next.next.next = Node(4)',
+      '# 在 2 和 3 之间插入 5',
+      'new_node = Node(5)',
+      'new_node.next = head.next.next',
+      'head.next.next = new_node',
+      '# 删除节点 4',
+      'head.next.next.next.next = None'
+    ],
+    java: [
+      'class Node { int val; Node next; Node(int v){val=v;} }',
+      'Node head = new Node(1);',
+      'head.next = new Node(2);',
+      'head.next.next = new Node(3);',
+      'head.next.next.next = new Node(4);',
+      '// 插入 5 到 2 与 3 之间',
+      'Node n = new Node(5);',
+      'n.next = head.next.next;',
+      'head.next.next = n;',
+      '// 删除末尾 4',
+      'head.next.next.next.next = null;'
+    ],
+    cpp: [
+      'struct Node { int val; Node* next; Node(int v):val(v),next(nullptr){} };',
+      'Node* head = new Node(1);',
+      'head->next = new Node(2);',
+      'head->next->next = new Node(3);',
+      'head->next->next->next = new Node(4);',
+      '// 插入 5',
+      'Node* n = new Node(5);',
+      'n->next = head->next->next;',
+      'head->next->next = n;',
+      '// 删除 4',
+      'head->next->next->next->next = nullptr;'
+    ],
+    js: [
+      'class Node { constructor(v){this.val=v;this.next=null;} }',
+      'const head = new Node(1);',
+      'head.next = new Node(2);',
+      'head.next.next = new Node(3);',
+      'head.next.next.next = new Node(4);',
+      '// 插入 5',
+      'const n = new Node(5);',
+      'n.next = head.next.next;',
+      'head.next.next = n;',
+      '// 删除 4',
+      'head.next.next.next.next = null;'
+    ],
+    go: [
+      'type Node struct { Val int; Next *Node }',
+      'head := &Node{Val:1}',
+      'head.Next = &Node{Val:2}',
+      'head.Next.Next = &Node{Val:3}',
+      'head.Next.Next.Next = &Node{Val:4}',
+      '// 插入 5',
+      'n := &Node{Val:5}',
+      'n.Next = head.Next.Next',
+      'head.Next.Next = n',
+      '// 删除 4',
+      'head.Next.Next.Next.Next = nil'
+    ],
+    c: [
+      'typedef struct Node { int val; struct Node* next; } Node;',
+      'Node* head = malloc(sizeof(Node)); head->val=1;',
+      'head->next = malloc(sizeof(Node)); head->next->val=2;',
+      'head->next->next = malloc(sizeof(Node)); head->next->next->val=3;',
+      'head->next->next->next = malloc(sizeof(Node)); head->next->next->next->val=4;',
+      '// 插入 5',
+      'Node* n = malloc(sizeof(Node)); n->val=5;',
+      'n->next = head->next->next;',
+      'head->next->next = n;',
+      '// 删除 4',
+      'head->next->next->next->next = NULL;'
+    ]
+  },
+  build() {
+    return [
+      {line:0, desc:`定义节点结构 {val, next}`, list:[], highlight:-1},
+      {line:1, desc:`创建头节点 1`, list:[1], highlight:0},
+      {line:2, desc:`链接 1 → 2`, list:[1,2], highlight:1},
+      {line:3, desc:`链接 1 → 2 → 3`, list:[1,2,3], highlight:2},
+      {line:4, desc:`链接 1 → 2 → 3 → 4`, list:[1,2,3,4], highlight:3},
+      {line:5, desc:`准备在 2 与 3 之间插入 5`, list:[1,2,3,4], highlight:-1, insert:{at:2}},
+      {line:6, desc:`创建新节点 5`, list:[1,2,3,4], highlight:-1, insert:{at:2, newVal:5}},
+      {line:7, desc:`new.next 指向 3`, list:[1,2,3,4], highlight:-1, insert:{at:2, newVal:5, linking:true}},
+      {line:8, desc:`2.next 指向 new → [1,2,5,3,4]`, list:[1,2,5,3,4], highlight:2},
+      {line:9, desc:`准备删除末尾节点 4`, list:[1,2,5,3,4], highlight:4, del:true},
+      {line:10, desc:`3.next = null → [1,2,5,3]`, list:[1,2,5,3], highlight:-1},
+    ];
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const list = state.list || [];
+    const hl = state.highlight;
+    let html = `<div class="h-full flex flex-col items-center justify-center">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-2">单向链表</div>`;
+    html += `<div class="text-xs text-slate-500 dark:text-slate-400 mb-6">每个节点存储值和指向下一节点的指针</div>`;
+
+    html += `<div class="flex items-center gap-1 flex-wrap justify-center">`;
+    // HEAD label
+    if (list.length > 0) {
+      html += `<div class="flex flex-col items-center mr-1"><div class="text-xs font-bold text-emerald-600">HEAD</div><i class="fa-solid fa-arrow-down text-emerald-500"></i></div>`;
+    }
+    list.forEach((v, i) => {
+      const isH = i === hl;
+      const isIns = state.insert && state.insert.newVal && i === state.insert.at && state.insert.linking;
+      let bg = 'linear-gradient(135deg,#818cf8,#6366f1)';
+      if (isH) bg = 'linear-gradient(135deg,#fbbf24,#f59e0b)';
+      if (state.del && i === hl) bg = 'linear-gradient(135deg,#fb7185,#e11d48)';
+      html += `<div class="flex items-center">`;
+      html += `<div class="arr-cell rounded-xl px-4 py-3 text-white font-bold shadow-lg border-2 border-white/30" style="background:${bg};">
+        <div class="text-center">${v}</div>
+      </div>`;
+      if (i < list.length - 1) {
+        html += `<i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i>`;
+      }
+      html += `</div>`;
+    });
+    if (list.length > 0) {
+      html += `<span class="ml-2 text-slate-400 text-sm italic">NULL</span>`;
+    }
+    html += `</div>`;
+
+    // show insertion node floating above
+    if (state.insert && state.insert.newVal) {
+      html += `<div class="mt-6 flex flex-col items-center animate-pop">`;
+      html += `<div class="text-xs text-rose-500 font-bold mb-1">新节点</div>`;
+      html += `<div class="rounded-xl px-4 py-3 text-white font-bold shadow-lg border-2 border-white/40" style="background:linear-gradient(135deg,#f472b6,#ec4899);">${state.insert.newVal}</div>`;
+      if (state.insert.linking) html += `<div class="text-xs text-slate-500 mt-2">↓ next 指向 ${state.list[state.insert.at+1] || state.list[state.insert.at]}</div>`;
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  11) BINARY TREE (traversal)
+ * ============================================ */
+Algorithms.binaryTree = {
+  title: '二叉树遍历',
+  icon: 'fa-sitemap',
+  category: '树',
+  code: {
+    python: [
+      'class TreeNode:',
+      '    def __init__(self, val):',
+      '        self.val = val',
+      '        self.left = self.right = None',
+      '',
+      'def inorder(root):',
+      '    if not root: return',
+      '    inorder(root.left)',
+      '    print(root.val)',
+      '    inorder(root.right)'
+    ],
+    java: [
+      'class TreeNode { int val; TreeNode left, right; }',
+      '',
+      'void inorder(TreeNode root) {',
+      '    if (root == null) return;',
+      '    inorder(root.left);',
+      '    System.out.println(root.val);',
+      '    inorder(root.right);',
+      '}'
+    ],
+    cpp: [
+      'struct TreeNode { int val; TreeNode *left, *right; };',
+      '',
+      'void inorder(TreeNode* root) {',
+      '    if (!root) return;',
+      '    inorder(root->left);',
+      '    cout << root->val << " ";',
+      '    inorder(root->right);',
+      '}'
+    ],
+    js: [
+      'class TreeNode { constructor(v){this.val=v;this.left=null;this.right=null;} }',
+      '',
+      'function inorder(root) {',
+      '  if (!root) return;',
+      '  inorder(root.left);',
+      '  console.log(root.val);',
+      '  inorder(root.right);',
+      '}'
+    ],
+    go: [
+      'type TreeNode struct { Val int; Left, Right *TreeNode }',
+      '',
+      'func inorder(root *TreeNode) {',
+      '    if root == nil { return }',
+      '    inorder(root.Left)',
+      '    fmt.Println(root.Val)',
+      '    inorder(root.Right)',
+      '}'
+    ],
+    c: [
+      'typedef struct TreeNode { int val; struct TreeNode *left,*right; } TreeNode;',
+      '',
+      'void inorder(TreeNode* root) {',
+      '    if (!root) return;',
+      '    inorder(root->left);',
+      '    printf("%d ", root->val);',
+      '    inorder(root->right);',
+      '}'
+    ]
+  },
+  /* tree:
+            1
+           / \
+          2   3
+         / \   \
+        4   5   6
+  */
+  build() {
+    // nodes[i] = {id, val, left, right}
+    const nodes = [
+      null,
+      {id:1, val:1, left:2, right:3},
+      {id:2, val:2, left:4, right:5},
+      {id:3, val:3, left:null, right:6},
+      {id:4, val:4, left:null, right:null},
+      {id:5, val:5, left:null, right:null},
+      {id:6, val:6, left:null, right:null},
+    ];
+    const steps = [];
+    const visit = []; // visited order
+    const active = []; // stack
+    function inorder(id, descPrefix='') {
+      if (!id) {
+        steps.push({line:3, desc:`空节点，返回`, nodes, visit:[...visit], active:[...active]});
+        return;
+      }
+      active.push(id);
+      steps.push({line:2, desc:`访问节点 ${nodes[id].val}`, nodes, visit:[...visit], active:[...active], current:id});
+      steps.push({line:3, desc:`节点 ${nodes[id].val} 非空，继续`, nodes, visit:[...visit], active:[...active], current:id});
+      steps.push({line:4, desc:`递归左子树`, nodes, visit:[...visit], active:[...active], current:id});
+      inorder(nodes[id].left);
+      steps.push({line:5, desc:`输出 ${nodes[id].val}`, nodes, visit:[...visit, id], active:[...active], current:id});
+      visit.push(id);
+      steps.push({line:6, desc:`递归右子树`, nodes, visit:[...visit], active:[...active], current:id});
+      inorder(nodes[id].right);
+      active.pop();
+    }
+    steps.push({line:2, desc:`开始中序遍历`, nodes, visit:[], active:[]});
+    inorder(1);
+    steps.push({line:5, desc:`遍历完成 → [${visit.map(i=>nodes[i].val).join(', ')}]`, nodes, visit:[...visit], active:[]});
+    return steps;
+  },
+  render(state) {
+    drawTree(state.nodes, 1, {
+      current: state.current,
+      visited: state.visit || [],
+      active: state.active || [],
+      title: '二叉树中序遍历 (左→根→右)',
+      subtitle: '红色=当前 · 绿色=已访问 · 蓝色=调用栈'
+    });
+  }
+};
+
+/* ============================================
+ *  SHARED: drawTree helper
+ * ============================================ */
+function drawTree(nodes, rootId, opts = {}) {
+  const stage = document.getElementById('animStage');
+  const W = Math.max(stage.clientWidth - 40, 500);
+  const H = 320;
+  // BFS to compute levels & positions
+  const levels = {}; // id -> level
+  const parent = {};
+  function assign(id, level) {
+    if (!id || !nodes[id]) return;
+    levels[id] = level;
+    if (nodes[id].left) { parent[nodes[id].left] = id; assign(nodes[id].left, level+1); }
+    if (nodes[id].right) { parent[nodes[id].right] = id; assign(nodes[id].right, level+1); }
+  }
+  assign(rootId, 0);
+  const maxLevel = Math.max(...Object.values(levels), 0);
+
+  // position: for each level, width divided equally among max slots
+  const positions = {};
+  function place(id, xMin, xMax, level) {
+    if (!id || !nodes[id]) return;
+    const cx = (xMin + xMax) / 2;
+    const cy = 40 + level * 70;
+    positions[id] = {x: cx, y: cy};
+    place(nodes[id].left, xMin, cx, level+1);
+    place(nodes[id].right, cx, xMax, level+1);
+  }
+  place(rootId, 30, W-30, 0);
+
+  let svg = `<div class="h-full flex flex-col">`;
+  svg += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">${opts.title || '二叉树'}</div>`;
+  svg += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-2">${opts.subtitle || ''}</div>`;
+  svg += `<svg viewBox="0 0 ${W} ${H}" class="w-full" style="max-height:${H}px">`;
+
+  // edges
+  for (let id = 1; id < nodes.length; id++) {
+    if (!nodes[id]) continue;
+    const p = positions[id]; if (!p) continue;
+    if (nodes[id].left && positions[nodes[id].left]) {
+      const c = positions[nodes[id].left];
+      svg += `<line x1="${p.x}" y1="${p.y}" x2="${c.x}" y2="${c.y}" stroke="#94a3b8" stroke-width="2" />`;
+    }
+    if (nodes[id].right && positions[nodes[id].right]) {
+      const c = positions[nodes[id].right];
+      svg += `<line x1="${p.x}" y1="${p.y}" x2="${c.x}" y2="${c.y}" stroke="#94a3b8" stroke-width="2" />`;
+    }
+  }
+  // nodes
+  for (let id = 1; id < nodes.length; id++) {
+    if (!nodes[id]) continue;
+    const p = positions[id]; if (!p) continue;
+    let fill = '#6366f1';
+    if ((opts.active || []).includes(id)) fill = '#3b82f6';
+    if ((opts.visited || []).includes(id)) fill = '#10b981';
+    if (opts.current === id) fill = '#ef4444';
+    if ((opts.comparing || []).includes(id)) fill = '#f59e0b';
+    const r = 22;
+    svg += `<g class="tree-node-circle" style="transform-origin:${p.x}px ${p.y}px;">`;
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="white" stroke-width="3" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.15))"/>`;
+    svg += `<text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="white" font-weight="700" font-size="14">${nodes[id].val}</text>`;
+    svg += `</g>`;
+  }
+  svg += `</svg>`;
+
+  // visited order
+  if (opts.visited && opts.visited.length) {
+    const vals = opts.visited.map(i => nodes[i].val).join(' → ');
+    svg += `<div class="text-center text-sm mt-2 text-emerald-600 dark:text-emerald-400 font-semibold">访问顺序: ${vals}</div>`;
+  }
+  svg += `</div>`;
+  stage.innerHTML = svg;
+}
+
+/* ============================================
+ *  12) BINARY SEARCH TREE (insert & search)
+ * ============================================ */
+Algorithms.bst = {
+  title: '二叉搜索树',
+  icon: 'fa-tree',
+  category: '树',
+  code: {
+    python: [
+      'class TreeNode:',
+      '    def __init__(self, val):',
+      '        self.val = val; self.left=self.right=None',
+      '',
+      'def search(root, target):',
+      '    while root:',
+      '        if target == root.val: return root',
+      '        elif target < root.val: root = root.left',
+      '        else: root = root.right',
+      '    return None'
+    ],
+    java: [
+      'class TreeNode { int val; TreeNode left, right; }',
+      '',
+      'TreeNode search(TreeNode root, int target) {',
+      '    while (root != null) {',
+      '        if (target == root.val) return root;',
+      '        else if (target < root.val) root = root.left;',
+      '        else root = root.right;',
+      '    }',
+      '    return null;',
+      '}'
+    ],
+    cpp: [
+      'struct TreeNode { int val; TreeNode *left,*right; };',
+      '',
+      'TreeNode* search(TreeNode* root, int target) {',
+      '    while (root) {',
+      '        if (target == root->val) return root;',
+      '        else if (target < root->val) root = root->left;',
+      '        else root = root->right;',
+      '    }',
+      '    return nullptr;',
+      '}'
+    ],
+    js: [
+      'class TreeNode { constructor(v){this.val=v;this.left=null;this.right=null;} }',
+      '',
+      'function search(root, target) {',
+      '  while (root) {',
+      '    if (target === root.val) return root;',
+      '    else if (target < root.val) root = root.left;',
+      '    else root = root.right;',
+      '  }',
+      '  return null;',
+      '}'
+    ],
+    go: [
+      'type TreeNode struct { Val int; Left,Right *TreeNode }',
+      '',
+      'func search(root *TreeNode, target int) *TreeNode {',
+      '    for root != nil {',
+      '        if target == root.Val { return root }',
+      '        if target < root.Val { root = root.Left',
+      '        } else { root = root.Right }',
+      '    }',
+      '    return nil',
+      '}'
+    ],
+    c: [
+      'typedef struct TreeNode { int val; struct TreeNode *left,*right; } TreeNode;',
+      '',
+      'TreeNode* search(TreeNode* root, int target) {',
+      '    while (root) {',
+      '        if (target == root->val) return root;',
+      '        else if (target < root->val) root = root->left;',
+      '        else root = root->right;',
+      '    }',
+      '    return NULL;',
+      '}'
+    ]
+  },
+  build() {
+    // BST:        8
+    //           /   \
+    //          3    10
+    //         / \     \
+    //        1   6    14
+    //           / \   /
+    //          4   7 13
+    const nodes = [
+      null,
+      {id:1, val:8, left:2, right:3},
+      {id:2, val:3, left:4, right:5},
+      {id:3, val:10, left:null, right:6},
+      {id:4, val:1, left:null, right:null},
+      {id:5, val:6, left:7, right:8},
+      {id:6, val:14, left:9, right:null},
+      {id:7, val:4, left:null, right:null},
+      {id:8, val:7, left:null, right:null},
+      {id:9, val:13, left:null, right:null},
+    ];
+    const target = 7; const steps = [];
+    let cur = 1;
+    steps.push({line:3, desc:`在 BST 中查找 target = ${target}`, nodes, current:cur});
+    while (cur) {
+      steps.push({line:3, desc:`访问节点 ${nodes[cur].val}`, nodes, current:cur});
+      steps.push({line:4, desc:`比较 ${target} 与 ${nodes[cur].val}`, nodes, current:cur, comparing:[cur]});
+      if (target === nodes[cur].val) {
+        steps.push({line:4, desc:`找到！返回节点 ${nodes[cur].val}`, nodes, current:cur, visited:[cur]});
+        return steps;
+      } else if (target < nodes[cur].val) {
+        steps.push({line:5, desc:`${target} < ${nodes[cur].val}，向左子树`, nodes, current:cur});
+        cur = nodes[cur].left;
+      } else {
+        steps.push({line:6, desc:`${target} > ${nodes[cur].val}，向右子树`, nodes, current:cur});
+        cur = nodes[cur].right;
+      }
+    }
+    steps.push({line:8, desc:`未找到`, nodes});
+    return steps;
+  },
+  render(state) {
+    drawTree(state.nodes, 1, {
+      current: state.current,
+      visited: state.visited || [],
+      comparing: state.comparing || [],
+      title: '二叉搜索树 BST 查找 (target=7)',
+      subtitle: '左子树 < 根 < 右子树 · 每次排除一半'
+    });
+  }
+};
+
+/* ============================================
+ *  13) HEAP (Min-heap push/pop with sift)
+ * ============================================ */
+Algorithms.heap = {
+  title: '堆 Heap',
+  icon: 'fa-mountain',
+  category: '树',
+  code: {
+    python: [
+      'import heapq',
+      'heap = []',
+      'heapq.heappush(heap, 5)',
+      'heapq.heappush(heap, 3)',
+      'heapq.heappush(heap, 8)',
+      'heapq.heappush(heap, 1)',
+      'heapq.heappush(heap, 6)',
+      'x = heapq.heappop(heap)  # 1',
+      'y = heapq.heappop(heap)  # 3'
+    ],
+    java: [
+      'PriorityQueue<Integer> heap = new PriorityQueue<>();',
+      'heap.offer(5);',
+      'heap.offer(3);',
+      'heap.offer(8);',
+      'heap.offer(1);',
+      'heap.offer(6);',
+      'int x = heap.poll(); // 1',
+      'int y = heap.poll(); // 3',
+      'System.out.println(heap);'
+    ],
+    cpp: [
+      'priority_queue<int, vector<int>, greater<int>> heap;',
+      'heap.push(5);',
+      'heap.push(3);',
+      'heap.push(8);',
+      'heap.push(1);',
+      'heap.push(6);',
+      'int x = heap.top(); heap.pop(); // 1',
+      'int y = heap.top(); heap.pop(); // 3',
+      '// top = 5'
+    ],
+    js: [
+      '// 最小堆（示意）',
+      'const heap = new MinHeap();',
+      'heap.push(5);',
+      'heap.push(3);',
+      'heap.push(8);',
+      'heap.push(1);',
+      'heap.push(6);',
+      'const x = heap.pop(); // 1',
+      'const y = heap.pop(); // 3'
+    ],
+    go: [
+      'h := &IntHeap{}',
+      'heap.Init(h)',
+      'heap.Push(h, 5)',
+      'heap.Push(h, 3)',
+      'heap.Push(h, 8)',
+      'heap.Push(h, 1)',
+      'heap.Push(h, 6)',
+      'x := heap.Pop(h).(int)',
+      'y := heap.Pop(h).(int)'
+    ],
+    c: [
+      '// 简化最小堆数组表示',
+      'int heap[100]; int size = 0;',
+      'push(5); push(3); push(8);',
+      'push(1); push(6);',
+      '// heap: [1,3,8,5,6]',
+      'int x = pop(); // 1',
+      'int y = pop(); // 3',
+      '// heap: [5,6,8]',
+      ''
+    ]
+  },
+  build() {
+    const steps = [];
+    const h = [];
+    // insert with sift-up
+    function push(v) {
+      h.push(v);
+      steps.push({line:2, desc:`将 ${v} 添加到末尾`, heap:[...h], highlight:h.length-1});
+      let i = h.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (h[p] > h[i]) {
+          steps.push({line:2, desc:`与父节点 ${h[p]} 比较，${h[i]}<${h[p]}，上浮`, heap:[...h], comparing:[i,p]});
+          [h[i], h[p]] = [h[p], h[i]];
+          steps.push({line:2, desc:`交换`, heap:[...h], highlight:p});
+          i = p;
+        } else break;
+      }
+    }
+    function pop() {
+      const r = h[0];
+      steps.push({line:7, desc:`取出堆顶 ${r}`, heap:[...h], highlight:0});
+      h[0] = h[h.length-1]; h.pop();
+      steps.push({line:7, desc:`将末尾元素放到堆顶`, heap:[...h], highlight:0});
+      // sift-down
+      let i = 0;
+      while (true) {
+        const l = 2*i+1, r = 2*i+2;
+        let s = i;
+        if (l < h.length && h[l] < h[s]) s = l;
+        if (r < h.length && h[r] < h[s]) s = r;
+        if (s === i) break;
+        steps.push({line:7, desc:`与子节点比较，${h[s]}<${h[i]}，下沉`, heap:[...h], comparing:[i,s]});
+        [h[i], h[s]] = [h[s], h[i]];
+        steps.push({line:7, desc:`交换`, heap:[...h], highlight:s});
+        i = s;
+      }
+    }
+    steps.push({line:1, desc:`初始空堆`, heap:[]});
+    [5,3,8,1,6].forEach((v, idx) => {
+      steps.push({line:2+idx, desc:`push(${v})`, heap:[...h]});
+      push(v);
+    });
+    steps.push({line:7, desc:`pop() 最小元素`, heap:[...h]});
+    pop();
+    steps.push({line:8, desc:`pop() 最小元素`, heap:[...h]});
+    pop();
+    steps.push({line:8, desc:`最终堆：[${h.join(', ')}]`, heap:[...h]});
+    return steps;
+  },
+  render(state) {
+    // Build tree from array
+    const h = state.heap || [];
+    const nodes = [null];
+    h.forEach((v, i) => {
+      nodes.push({
+        id: i+1, val: v,
+        left: 2*i+2 <= h.length ? 2*i+2 : null,
+        right: 2*i+3 <= h.length ? 2*i+3 : null
+      });
+    });
+    const stage = document.getElementById('animStage');
+    if (h.length === 0) {
+      stage.innerHTML = `<div class="h-full flex items-center justify-center text-slate-400 italic">空堆</div>`;
+      return;
+    }
+    // draw as heap tree
+    const W = Math.max(stage.clientWidth - 40, 500); const H = 300;
+    const positions = {};
+    function place(id, xMin, xMax, level) {
+      if (!id || !nodes[id]) return;
+      const cx = (xMin + xMax)/2; const cy = 40 + level*70;
+      positions[id] = {x:cx, y:cy};
+      place(nodes[id].left, xMin, cx, level+1);
+      place(nodes[id].right, cx, xMax, level+1);
+    }
+    place(1, 30, W-30, 0);
+
+    let svg = `<div class="h-full flex flex-col">`;
+    svg += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">最小堆 Min-Heap</div>`;
+    svg += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-2">父节点 ≤ 子节点 · 完全二叉树（数组表示）</div>`;
+    svg += `<svg viewBox="0 0 ${W} ${Math.max(H, 100)}" class="w-full" style="max-height:${H}px">`;
+    for (let id = 1; id < nodes.length; id++) {
+      const p = positions[id]; if (!p) continue;
+      [nodes[id].left, nodes[id].right].forEach(cid => {
+        if (cid && positions[cid]) {
+          const c = positions[cid];
+          svg += `<line x1="${p.x}" y1="${p.y}" x2="${c.x}" y2="${c.y}" stroke="#94a3b8" stroke-width="2" />`;
+        }
+      });
+    }
+    for (let id = 1; id < nodes.length; id++) {
+      const p = positions[id]; if (!p) continue;
+      const idx = id - 1;
+      let fill = '#6366f1';
+      if ((state.comparing || []).includes(idx)) fill = '#f59e0b';
+      if (state.highlight === idx) fill = '#ef4444';
+      svg += `<g class="tree-node-circle" style="transform-origin:${p.x}px ${p.y}px;">`;
+      svg += `<circle cx="${p.x}" cy="${p.y}" r="22" fill="${fill}" stroke="white" stroke-width="3" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.15))"/>`;
+      svg += `<text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="white" font-weight="700" font-size="14">${nodes[id].val}</text>`;
+      svg += `</g>`;
+    }
+    svg += `</svg>`;
+    // array view
+    svg += `<div class="flex items-center justify-center gap-1 mt-2">`;
+    svg += `<span class="text-xs text-slate-400 mr-2">数组:</span>`;
+    h.forEach((v, i) => {
+      let bg = '#6366f1';
+      if ((state.comparing || []).includes(i)) bg = '#f59e0b';
+      if (state.highlight === i) bg = '#ef4444';
+      svg += `<div class="arr-cell rounded px-2 py-1 text-white text-xs font-bold" style="background:${bg};">${v}</div>`;
+    });
+    svg += `</div></div>`;
+    stage.innerHTML = svg;
+  }
+};
+
+/* ============================================
+ *  14) HASH TABLE
+ * ============================================ */
+Algorithms.hashTable = {
+  title: '哈希表 HashMap',
+  icon: 'fa-table-cells',
+  category: '数据结构',
+  code: {
+    python: [
+      'def h(key, size):',
+      '    return hash(key) % size',
+      '',
+      'table = [[] for _ in range(7)]',
+      'def put(k, v):',
+      '    idx = h(k, 7)',
+      '    table[idx].append((k, v))',
+      '',
+      'put("apple", 1)',
+      'put("banana", 2)',
+      'put("cherry", 3)',
+      'put("date", 4)'
+    ],
+    java: [
+      'HashMap<String,Integer> map = new HashMap<>();',
+      'map.put("apple", 1);',
+      'map.put("banana", 2);',
+      'map.put("cherry", 3);',
+      'map.put("date", 4);',
+      '// 底层：hash(key) & (n-1) 决定槽位',
+      '// 冲突时用链表/红黑树',
+      'Integer v = map.get("banana");',
+      'System.out.println(v);'
+    ],
+    cpp: [
+      '#include <unordered_map>',
+      'unordered_map<string,int> m;',
+      'm["apple"]  = 1;',
+      'm["banana"] = 2;',
+      'm["cherry"] = 3;',
+      'm["date"]   = 4;',
+      'int v = m["banana"];',
+      '// 冲突时用链表',
+      ''
+    ],
+    js: [
+      'const map = new Map();',
+      'map.set("apple", 1);',
+      'map.set("banana", 2);',
+      'map.set("cherry", 3);',
+      'map.set("date", 4);',
+      '// 平均 O(1) 时间复杂度',
+      'const v = map.get("banana");',
+      'console.log(v);',
+      ''
+    ],
+    go: [
+      'm := map[string]int{}',
+      'm["apple"]  = 1',
+      'm["banana"] = 2',
+      'm["cherry"] = 3',
+      'm["date"]   = 4',
+      '// 底层是散列表',
+      'v := m["banana"]',
+      'fmt.Println(v)',
+      ''
+    ],
+    c: [
+      '// C 无内置哈希表，需手动实现',
+      '#define SIZE 7',
+      'typedef struct Node { char* k; int v; struct Node* next; } Node;',
+      'Node* table[SIZE] = {0};',
+      'int hash(const char* s){ int h=0; while(*s) h=h*31+*s++; return (h%SIZE+SIZE)%SIZE; }',
+      'void put(const char* k, int v) { /* insert to table[hash(k)] */ }',
+      'put("apple", 1); put("banana", 2);',
+      'put("cherry", 3); put("date", 4);',
+      ''
+    ]
+  },
+  build() {
+    const size = 7;
+    // simple hash: sum of char codes % size
+    const hash = (s) => { let h=0; for (const c of s) h += c.charCodeAt(0); return h % size; };
+    const keys = [
+      {k:'apple', v:1},
+      {k:'banana', v:2},
+      {k:'cherry', v:3},
+      {k:'date', v:4},
+    ];
+    const table = Array.from({length:size}, () => []);
+    const steps = [];
+    steps.push({line:3, desc:`创建长度为 ${size} 的哈希表`, table:table.map(b=>[...b])});
+    keys.forEach((item, idx) => {
+      const i = hash(item.k);
+      steps.push({line:4+idx, desc:`put("${item.k}", ${item.v})`, table:table.map(b=>[...b]), highlight:-1, newKey:item.k});
+      steps.push({line:5, desc:`hash("${item.k}") = ${i}`, table:table.map(b=>[...b]), highlight:i, newKey:item.k});
+      table[i].push(item);
+      const collision = table[i].length > 1;
+      steps.push({line:6, desc:collision ? `槽位 ${i} 冲突 → 链表追加 ${item.k}` : `插入到槽位 ${i}`, table:table.map(b=>[...b]), highlight:i});
+    });
+    steps.push({line:8, desc:`哈希表构建完成`, table:table.map(b=>[...b])});
+    return steps;
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const t = state.table || [];
+    let html = `<div class="h-full flex flex-col">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">哈希表 (链地址法)</div>`;
+    html += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-3">hash(key) 决定槽位 · 冲突时使用链表</div>`;
+    html += `<div class="flex flex-col gap-2 items-stretch px-2">`;
+    t.forEach((bucket, i) => {
+      const isHL = state.highlight === i;
+      const slotBg = isHL ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-400' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700';
+      html += `<div class="flex items-center gap-2">`;
+      html += `<div class="w-12 text-center font-mono font-bold text-xs px-2 py-2 rounded-lg ${slotBg} border">[${i}]</div>`;
+      html += `<i class="fa-solid fa-arrow-right text-slate-400 text-xs"></i>`;
+      html += `<div class="flex gap-1 flex-1">`;
+      if (bucket.length === 0) {
+        html += `<div class="text-slate-400 italic text-xs">null</div>`;
+      } else {
+        bucket.forEach((item, idx) => {
+          html += `<div class="arr-cell px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow" style="background:linear-gradient(135deg,#818cf8,#6366f1);">${item.k}:${item.v}</div>`;
+          if (idx < bucket.length - 1) html += `<i class="fa-solid fa-arrow-right text-slate-300 self-center text-xs"></i>`;
+        });
+      }
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+    if (state.newKey) html += `<div class="text-center mt-3 text-xs text-indigo-500 font-medium">正在处理: "${state.newKey}"</div>`;
+    html += `</div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  15) GRAPH - BFS
+ * ============================================ */
+Algorithms.bfs = {
+  title: '图的 BFS',
+  icon: 'fa-circle-nodes',
+  category: '图',
+  code: {
+    python: [
+      'from collections import deque',
+      'def bfs(graph, start):',
+      '    visited = set([start])',
+      '    queue = deque([start])',
+      '    while queue:',
+      '        node = queue.popleft()',
+      '        for nb in graph[node]:',
+      '            if nb not in visited:',
+      '                visited.add(nb)',
+      '                queue.append(nb)',
+      '    return visited'
+    ],
+    java: [
+      'void bfs(Map<Integer,List<Integer>> g, int start) {',
+      '    Set<Integer> visited = new HashSet<>();',
+      '    Queue<Integer> q = new LinkedList<>();',
+      '    q.offer(start); visited.add(start);',
+      '    while (!q.isEmpty()) {',
+      '        int node = q.poll();',
+      '        for (int nb : g.get(node)) {',
+      '            if (!visited.contains(nb)) {',
+      '                visited.add(nb);',
+      '                q.offer(nb);',
+      '            }',
+      '        }',
+      '    }',
+      '}'
+    ],
+    cpp: [
+      'void bfs(vector<vector<int>>& g, int start) {',
+      '    unordered_set<int> visited{start};',
+      '    queue<int> q; q.push(start);',
+      '    while (!q.empty()) {',
+      '        int node = q.front(); q.pop();',
+      '        for (int nb : g[node]) {',
+      '            if (!visited.count(nb)) {',
+      '                visited.insert(nb);',
+      '                q.push(nb);',
+      '            }',
+      '        }',
+      '    }',
+      '}'
+    ],
+    js: [
+      'function bfs(graph, start) {',
+      '  const visited = new Set([start]);',
+      '  const queue = [start];',
+      '  while (queue.length) {',
+      '    const node = queue.shift();',
+      '    for (const nb of graph[node]) {',
+      '      if (!visited.has(nb)) {',
+      '        visited.add(nb);',
+      '        queue.push(nb);',
+      '      }',
+      '    }',
+      '  }',
+      '  return visited;',
+      '}'
+    ],
+    go: [
+      'func bfs(g map[int][]int, start int) {',
+      '    visited := map[int]bool{start:true}',
+      '    q := []int{start}',
+      '    for len(q) > 0 {',
+      '        node := q[0]; q = q[1:]',
+      '        for _, nb := range g[node] {',
+      '            if !visited[nb] {',
+      '                visited[nb] = true',
+      '                q = append(q, nb)',
+      '            }',
+      '        }',
+      '    }',
+      '}'
+    ],
+    c: [
+      '// 使用邻接表 + 手动队列',
+      'void bfs(int start) {',
+      '    int visited[N] = {0};',
+      '    int q[N], front=0, rear=0;',
+      '    q[rear++] = start; visited[start] = 1;',
+      '    while (front < rear) {',
+      '        int node = q[front++];',
+      '        for each neighbor nb of node:',
+      '            if (!visited[nb]) {',
+      '                visited[nb] = 1;',
+      '                q[rear++] = nb;',
+      '            }',
+      '    }',
+      '}'
+    ]
+  },
+  /*  Graph:
+        1 — 2
+        |   |
+        3 — 4 — 5
+            |
+            6
+  */
+  build() {
+    const nodes = {
+      1:{x:120,y:60}, 2:{x:260,y:60}, 3:{x:120,y:180},
+      4:{x:260,y:180}, 5:{x:400,y:180}, 6:{x:260,y:280}
+    };
+    const edges = [[1,2],[1,3],[2,4],[3,4],[4,5],[4,6]];
+    const adj = {1:[2,3],2:[1,4],3:[1,4],4:[2,3,5,6],5:[4],6:[4]};
+    const steps = [];
+    const visited = new Set(); const q = []; const order = [];
+    visited.add(1); q.push(1);
+    steps.push({line:2, desc:`起点 1 加入 visited 和 queue`, nodes, edges, visited:[...visited], queue:[...q], order:[...order]});
+    while (q.length) {
+      const node = q.shift();
+      order.push(node);
+      steps.push({line:5, desc:`出队节点 ${node}`, nodes, edges, visited:[...visited], queue:[...q], order:[...order], current:node});
+      for (const nb of adj[node]) {
+        steps.push({line:6, desc:`查看邻居 ${nb}`, nodes, edges, visited:[...visited], queue:[...q], order:[...order], current:node, looking:nb});
+        if (!visited.has(nb)) {
+          visited.add(nb);
+          q.push(nb);
+          steps.push({line:8, desc:`${nb} 未访问 → 加入队列`, nodes, edges, visited:[...visited], queue:[...q], order:[...order], current:node, looking:nb});
+        } else {
+          steps.push({line:7, desc:`${nb} 已访问，跳过`, nodes, edges, visited:[...visited], queue:[...q], order:[...order], current:node, looking:nb});
+        }
+      }
+    }
+    steps.push({line:10, desc:`BFS 完成，访问顺序：${order.join(' → ')}`, nodes, edges, visited:[...visited], queue:[], order:[...order]});
+    return steps;
+  },
+  render(state) {
+    drawGraph(state, 'BFS 广度优先搜索', '从起点逐层扩展，使用队列');
+  }
+};
+
+/* Shared graph drawer */
+function drawGraph(state, title, subtitle) {
+  const stage = document.getElementById('animStage');
+  const W = Math.max(stage.clientWidth - 40, 500), H = 340;
+  const nodes = state.nodes; const edges = state.edges;
+  let svg = `<div class="h-full flex flex-col">`;
+  svg += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">${title}</div>`;
+  svg += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-2">${subtitle}</div>`;
+  svg += `<svg viewBox="0 0 ${W} ${H}" class="w-full" style="max-height:${H}px">`;
+  // edges
+  edges.forEach(([a,b]) => {
+    const A = nodes[a], B = nodes[b];
+    svg += `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="#94a3b8" stroke-width="2"/>`;
+  });
+  // nodes
+  for (const id in nodes) {
+    const p = nodes[id];
+    let fill = '#6366f1';
+    if ((state.visited || []).includes(+id)) fill = '#10b981';
+    if ((state.queue || []).includes(+id)) fill = '#3b82f6';
+    if (state.looking === +id) fill = '#f59e0b';
+    if (state.current === +id) fill = '#ef4444';
+    svg += `<g class="tree-node-circle" style="transform-origin:${p.x}px ${p.y}px;">`;
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="22" fill="${fill}" stroke="white" stroke-width="3" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.2))"/>`;
+    svg += `<text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="white" font-weight="700" font-size="14">${id}</text>`;
+    svg += `</g>`;
+  }
+  svg += `</svg>`;
+  // queue/stack view
+  const container = state.queue !== undefined ? 'Queue' : (state.stack !== undefined ? 'Stack' : null);
+  const arr = state.queue || state.stack || [];
+  svg += `<div class="flex items-center gap-2 justify-center mt-1 flex-wrap">`;
+  if (container) {
+    svg += `<span class="text-xs text-slate-500 font-semibold">${container}:</span>`;
+    arr.forEach(v => {
+      svg += `<div class="arr-cell rounded px-2 py-1 text-white text-xs font-bold" style="background:#3b82f6;">${v}</div>`;
+    });
+    if (arr.length === 0) svg += `<span class="text-xs text-slate-400 italic">空</span>`;
+  }
+  svg += `</div>`;
+  if (state.order && state.order.length) {
+    svg += `<div class="text-center text-xs mt-1 text-emerald-600 dark:text-emerald-400 font-semibold">访问顺序: ${state.order.join(' → ')}</div>`;
+  }
+  svg += `</div>`;
+  stage.innerHTML = svg;
+}
+
+/* ============================================
+ *  16) GRAPH - DFS
+ * ============================================ */
+Algorithms.dfs = {
+  title: '图的 DFS',
+  icon: 'fa-diagram-project',
+  category: '图',
+  code: {
+    python: [
+      'def dfs(graph, start):',
+      '    visited = set()',
+      '    stack = [start]',
+      '    while stack:',
+      '        node = stack.pop()',
+      '        if node in visited: continue',
+      '        visited.add(node)',
+      '        for nb in graph[node]:',
+      '            if nb not in visited:',
+      '                stack.append(nb)',
+      '    return visited'
+    ],
+    java: [
+      'void dfs(Map<Integer,List<Integer>> g, int start) {',
+      '    Set<Integer> visited = new HashSet<>();',
+      '    Deque<Integer> stack = new ArrayDeque<>();',
+      '    stack.push(start);',
+      '    while (!stack.isEmpty()) {',
+      '        int node = stack.pop();',
+      '        if (visited.contains(node)) continue;',
+      '        visited.add(node);',
+      '        for (int nb : g.get(node))',
+      '            if (!visited.contains(nb)) stack.push(nb);',
+      '    }',
+      '}'
+    ],
+    cpp: [
+      'void dfs(vector<vector<int>>& g, int start) {',
+      '    unordered_set<int> visited;',
+      '    stack<int> s; s.push(start);',
+      '    while (!s.empty()) {',
+      '        int node = s.top(); s.pop();',
+      '        if (visited.count(node)) continue;',
+      '        visited.insert(node);',
+      '        for (int nb : g[node])',
+      '            if (!visited.count(nb)) s.push(nb);',
+      '    }',
+      '}'
+    ],
+    js: [
+      'function dfs(graph, start) {',
+      '  const visited = new Set();',
+      '  const stack = [start];',
+      '  while (stack.length) {',
+      '    const node = stack.pop();',
+      '    if (visited.has(node)) continue;',
+      '    visited.add(node);',
+      '    for (const nb of graph[node])',
+      '      if (!visited.has(nb)) stack.push(nb);',
+      '  }',
+      '  return visited;',
+      '}'
+    ],
+    go: [
+      'func dfs(g map[int][]int, start int) {',
+      '    visited := map[int]bool{}',
+      '    stack := []int{start}',
+      '    for len(stack) > 0 {',
+      '        node := stack[len(stack)-1]',
+      '        stack = stack[:len(stack)-1]',
+      '        if visited[node] { continue }',
+      '        visited[node] = true',
+      '        for _, nb := range g[node] {',
+      '            if !visited[nb] { stack = append(stack, nb) }',
+      '        }',
+      '    }',
+      '}'
+    ],
+    c: [
+      'void dfs(int start) {',
+      '    int visited[N] = {0};',
+      '    int stack[N], top = -1;',
+      '    stack[++top] = start;',
+      '    while (top >= 0) {',
+      '        int node = stack[top--];',
+      '        if (visited[node]) continue;',
+      '        visited[node] = 1;',
+      '        for each neighbor nb:',
+      '            if (!visited[nb]) stack[++top] = nb;',
+      '    }',
+      '}'
+    ]
+  },
+  build() {
+    const nodes = {
+      1:{x:120,y:60}, 2:{x:260,y:60}, 3:{x:120,y:180},
+      4:{x:260,y:180}, 5:{x:400,y:180}, 6:{x:260,y:280}
+    };
+    const edges = [[1,2],[1,3],[2,4],[3,4],[4,5],[4,6]];
+    const adj = {1:[2,3],2:[1,4],3:[1,4],4:[2,3,5,6],5:[4],6:[4]};
+    const steps = [];
+    const visited = new Set(); const stack = [1]; const order = [];
+    steps.push({line:2, desc:`起点 1 入栈`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order]});
+    while (stack.length) {
+      const node = stack.pop();
+      steps.push({line:4, desc:`栈顶出栈：${node}`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order], current:node});
+      if (visited.has(node)) {
+        steps.push({line:5, desc:`${node} 已访问，跳过`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order], current:node});
+        continue;
+      }
+      visited.add(node); order.push(node);
+      steps.push({line:6, desc:`标记 ${node} 为已访问`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order], current:node});
+      for (const nb of adj[node]) {
+        steps.push({line:7, desc:`检查邻居 ${nb}`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order], current:node, looking:nb});
+        if (!visited.has(nb)) {
+          stack.push(nb);
+          steps.push({line:8, desc:`${nb} 入栈`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order], current:node, looking:nb});
+        }
+      }
+    }
+    steps.push({line:9, desc:`DFS 完成，访问顺序：${order.join(' → ')}`, nodes, edges, visited:[...visited], stack:[], order:[...order]});
+    return steps;
+  },
+  render(state) {
+    drawGraph(state, 'DFS 深度优先搜索', '沿路径深入到底，再回溯 · 使用栈');
+  }
+};
+
+/* ============================================
+ *  17) SLIDING WINDOW
+ * ============================================ */
+Algorithms.slidingWindow = {
+  title: '滑动窗口',
+  icon: 'fa-window-restore',
+  category: '算法技巧',
+  code: {
+    python: [
+      'def max_sum(arr, k):',
+      '    n = len(arr)',
+      '    s = sum(arr[:k])',
+      '    best = s',
+      '    for i in range(k, n):',
+      '        s += arr[i] - arr[i-k]',
+      '        best = max(best, s)',
+      '    return best'
+    ],
+    java: [
+      'int maxSum(int[] arr, int k) {',
+      '    int s = 0;',
+      '    for (int i = 0; i < k; i++) s += arr[i];',
+      '    int best = s;',
+      '    for (int i = k; i < arr.length; i++) {',
+      '        s += arr[i] - arr[i-k];',
+      '        best = Math.max(best, s);',
+      '    }',
+      '    return best;',
+      '}'
+    ],
+    cpp: [
+      'int maxSum(vector<int>& arr, int k) {',
+      '    int s = 0;',
+      '    for (int i = 0; i < k; i++) s += arr[i];',
+      '    int best = s;',
+      '    for (int i = k; i < arr.size(); i++) {',
+      '        s += arr[i] - arr[i-k];',
+      '        best = max(best, s);',
+      '    }',
+      '    return best;',
+      '}'
+    ],
+    js: [
+      'function maxSum(arr, k) {',
+      '  let s = 0;',
+      '  for (let i = 0; i < k; i++) s += arr[i];',
+      '  let best = s;',
+      '  for (let i = k; i < arr.length; i++) {',
+      '    s += arr[i] - arr[i-k];',
+      '    best = Math.max(best, s);',
+      '  }',
+      '  return best;',
+      '}'
+    ],
+    go: [
+      'func maxSum(arr []int, k int) int {',
+      '    s := 0',
+      '    for i := 0; i < k; i++ { s += arr[i] }',
+      '    best := s',
+      '    for i := k; i < len(arr); i++ {',
+      '        s += arr[i] - arr[i-k]',
+      '        if s > best { best = s }',
+      '    }',
+      '    return best',
+      '}'
+    ],
+    c: [
+      'int maxSum(int arr[], int n, int k) {',
+      '    int s = 0;',
+      '    for (int i = 0; i < k; i++) s += arr[i];',
+      '    int best = s;',
+      '    for (int i = k; i < n; i++) {',
+      '        s += arr[i] - arr[i-k];',
+      '        if (s > best) best = s;',
+      '    }',
+      '    return best;',
+      '}'
+    ]
+  },
+  build() {
+    const arr = [2, 5, 1, 8, 3, 7, 4, 6]; const k = 3; const steps = [];
+    let s = 0;
+    for (let i = 0; i < k; i++) s += arr[i];
+    steps.push({line:2, desc:`初始窗口 [0..${k-1}] 和 = ${s}`, arr, k, window:[0,k-1], sum:s, best:s});
+    let best = s;
+    for (let i = k; i < arr.length; i++) {
+      const old = s;
+      s += arr[i] - arr[i-k];
+      steps.push({line:5, desc:`窗口右移：+ arr[${i}]=${arr[i]} - arr[${i-k}]=${arr[i-k]}，和 ${old}→${s}`, arr, k, window:[i-k+1, i], sum:s, best, adding:i, removing:i-k});
+      best = Math.max(best, s);
+      steps.push({line:6, desc:`更新最大值 best = ${best}`, arr, k, window:[i-k+1, i], sum:s, best});
+    }
+    steps.push({line:7, desc:`最终最大子数组和 = ${best}`, arr, k, window:[-1,-1], sum:0, best});
+    return steps;
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const arr = state.arr; const n = arr.length;
+    const cellW = Math.min(60, Math.floor((stage.clientWidth - 60) / n));
+    let html = `<div class="h-full flex flex-col">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">滑动窗口 · 窗口大小 k=${state.k}</div>`;
+    html += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-3">求长度为 k 的子数组最大和</div>`;
+
+    html += `<div class="flex items-end justify-center gap-1 mb-2" style="height:160px">`;
+    const [ws, we] = state.window || [-1,-1];
+    arr.forEach((v, i) => {
+      const h = Math.max(20, v/Math.max(...arr)*140);
+      let bg = 'linear-gradient(180deg,#cbd5e1,#94a3b8)';
+      if (i >= ws && i <= we) bg = 'linear-gradient(180deg,#fbbf24,#f59e0b)';
+      if (i === state.adding) bg = 'linear-gradient(180deg,#34d399,#10b981)';
+      if (i === state.removing) bg = 'linear-gradient(180deg,#fb7185,#e11d48)';
+      html += `<div class="arr-cell rounded-t-lg flex items-end justify-center text-white text-xs font-bold pb-1"
+        style="width:${cellW}px; height:${h}px; background:${bg}; box-shadow:0 4px 12px rgba(0,0,0,0.08);">${v}</div>`;
+    });
+    html += `</div>`;
+    // window bracket
+    html += `<div class="flex justify-center gap-1 mb-2">`;
+    arr.forEach((_, i) => {
+      const inW = i >= ws && i <= we;
+      html += `<div style="width:${cellW}px" class="text-center">${inW ? '<div class="h-1 bg-amber-500 rounded-full"></div>' : ''}</div>`;
+    });
+    html += `</div>`;
+    html += `<div class="flex justify-center gap-1">`;
+    arr.forEach((_, i) => {
+      html += `<div style="width:${cellW}px" class="text-center text-xs text-slate-400">${i}</div>`;
+    });
+    html += `</div>`;
+    html += `<div class="mt-3 flex gap-4 justify-center text-sm">
+      <div class="px-3 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-semibold">当前和: ${state.sum}</div>
+      <div class="px-3 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold">最大和: ${state.best}</div>
+    </div>`;
+    html += `</div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  18) TWO POINTERS
+ * ============================================ */
+Algorithms.twoPointers = {
+  title: '双指针',
+  icon: 'fa-arrows-left-right',
+  category: '算法技巧',
+  code: {
+    python: [
+      'def two_sum(arr, target):',
+      '    l, r = 0, len(arr) - 1',
+      '    while l < r:',
+      '        s = arr[l] + arr[r]',
+      '        if s == target:',
+      '            return [l, r]',
+      '        elif s < target:',
+      '            l += 1',
+      '        else:',
+      '            r -= 1',
+      '    return []'
+    ],
+    java: [
+      'int[] twoSum(int[] arr, int target) {',
+      '    int l = 0, r = arr.length - 1;',
+      '    while (l < r) {',
+      '        int s = arr[l] + arr[r];',
+      '        if (s == target) return new int[]{l, r};',
+      '        else if (s < target) l++;',
+      '        else r--;',
+      '    }',
+      '    return new int[0];',
+      '}'
+    ],
+    cpp: [
+      'vector<int> twoSum(vector<int>& arr, int target) {',
+      '    int l = 0, r = arr.size() - 1;',
+      '    while (l < r) {',
+      '        int s = arr[l] + arr[r];',
+      '        if (s == target) return {l, r};',
+      '        else if (s < target) l++;',
+      '        else r--;',
+      '    }',
+      '    return {};',
+      '}'
+    ],
+    js: [
+      'function twoSum(arr, target) {',
+      '  let l = 0, r = arr.length - 1;',
+      '  while (l < r) {',
+      '    const s = arr[l] + arr[r];',
+      '    if (s === target) return [l, r];',
+      '    else if (s < target) l++;',
+      '    else r--;',
+      '  }',
+      '  return [];',
+      '}'
+    ],
+    go: [
+      'func twoSum(arr []int, target int) []int {',
+      '    l, r := 0, len(arr)-1',
+      '    for l < r {',
+      '        s := arr[l] + arr[r]',
+      '        if s == target { return []int{l, r} }',
+      '        if s < target { l++ } else { r-- }',
+      '    }',
+      '    return nil',
+      '}'
+    ],
+    c: [
+      'void twoSum(int arr[], int n, int target, int out[2]) {',
+      '    int l = 0, r = n - 1;',
+      '    while (l < r) {',
+      '        int s = arr[l] + arr[r];',
+      '        if (s == target) { out[0]=l; out[1]=r; return; }',
+      '        else if (s < target) l++;',
+      '        else r--;',
+      '    }',
+      '}'
+    ]
+  },
+  build() {
+    const arr = [1, 3, 4, 6, 8, 10, 13, 17]; const target = 14; const steps = [];
+    let l = 0, r = arr.length - 1;
+    steps.push({line:1, desc:`初始化 l=0, r=${arr.length-1}，target=${target}`, arr, pointers:{l, r}});
+    while (l < r) {
+      steps.push({line:2, desc:`l=${l} < r=${r}，继续`, arr, pointers:{l, r}});
+      const s = arr[l] + arr[r];
+      steps.push({line:3, desc:`arr[${l}]+arr[${r}] = ${arr[l]}+${arr[r]} = ${s}`, arr, pointers:{l, r}, highlights:{[l]:'compare', [r]:'compare'}});
+      if (s === target) {
+        steps.push({line:4, desc:`找到！返回 [${l}, ${r}]`, arr, pointers:{l, r}, highlights:{[l]:'found', [r]:'found'}});
+        return steps;
+      } else if (s < target) {
+        steps.push({line:6, desc:`${s} < ${target}，l++`, arr, pointers:{l, r}});
+        l++;
+      } else {
+        steps.push({line:8, desc:`${s} > ${target}，r--`, arr, pointers:{l, r}});
+        r--;
+      }
+    }
+    steps.push({line:10, desc:`未找到`, arr});
+    return steps;
+  },
+  render(state) {
+    renderArrayCells(state.arr, {
+      highlights: state.highlights || {},
+      pointers: state.pointers || {},
+      title: '双指针求两数之和 · target = 14',
+      subtitle: '已排序数组：左右指针相向移动'
+    });
+  }
+};
+
+/* ============================================
+ *  19) RECURSION (Factorial)
+ * ============================================ */
+Algorithms.recursion = {
+  title: '递归 (阶乘)',
+  icon: 'fa-arrow-rotate-left',
+  category: '算法技巧',
+  code: {
+    python: [
+      'def factorial(n):',
+      '    if n <= 1:',
+      '        return 1',
+      '    return n * factorial(n - 1)',
+      '',
+      'print(factorial(5))  # 120'
+    ],
+    java: [
+      'int factorial(int n) {',
+      '    if (n <= 1) return 1;',
+      '    return n * factorial(n - 1);',
+      '}',
+      '',
+      'System.out.println(factorial(5)); // 120'
+    ],
+    cpp: [
+      'int factorial(int n) {',
+      '    if (n <= 1) return 1;',
+      '    return n * factorial(n - 1);',
+      '}',
+      '',
+      'cout << factorial(5); // 120'
+    ],
+    js: [
+      'function factorial(n) {',
+      '  if (n <= 1) return 1;',
+      '  return n * factorial(n - 1);',
+      '}',
+      '',
+      'console.log(factorial(5)); // 120'
+    ],
+    go: [
+      'func factorial(n int) int {',
+      '    if n <= 1 { return 1 }',
+      '    return n * factorial(n-1)',
+      '}',
+      '',
+      'fmt.Println(factorial(5)) // 120'
+    ],
+    c: [
+      'int factorial(int n) {',
+      '    if (n <= 1) return 1;',
+      '    return n * factorial(n - 1);',
+      '}',
+      '',
+      'printf("%d", factorial(5)); // 120'
+    ]
+  },
+  build() {
+    const steps = [];
+    const frames = [];
+    function fact(n) {
+      frames.push({n, state:'call', val:null});
+      steps.push({line:0, desc:`调用 factorial(${n})`, frames:frames.map(f=>({...f}))});
+      steps.push({line:1, desc:`检查 n=${n} <= 1?`, frames:frames.map(f=>({...f}))});
+      if (n <= 1) {
+        frames[frames.length-1].state = 'return';
+        frames[frames.length-1].val = 1;
+        steps.push({line:2, desc:`n=${n} <= 1, 返回 1`, frames:frames.map(f=>({...f}))});
+        return 1;
+      }
+      steps.push({line:3, desc:`递归调用 factorial(${n-1})`, frames:frames.map(f=>({...f}))});
+      const sub = fact(n-1);
+      const result = n * sub;
+      frames[frames.length-1].state = 'return';
+      frames[frames.length-1].val = result;
+      steps.push({line:3, desc:`返回 ${n} × ${sub} = ${result}`, frames:frames.map(f=>({...f}))});
+      frames.pop();
+      return result;
+    }
+    fact(5);
+    return steps;
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const frames = state.frames || [];
+    let html = `<div class="h-full flex flex-col items-center justify-center">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">递归调用栈</div>`;
+    html += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-4">factorial(n) = n × factorial(n-1)</div>`;
+    html += `<div class="flex flex-col-reverse gap-2 items-center">`;
+    frames.forEach((f, i) => {
+      const isTop = i === frames.length - 1;
+      let bg = 'linear-gradient(135deg,#818cf8,#6366f1)';
+      if (f.state === 'return') bg = 'linear-gradient(135deg,#34d399,#10b981)';
+      if (isTop && f.state === 'call') bg = 'linear-gradient(135deg,#fbbf24,#f59e0b)';
+      html += `<div class="arr-cell rounded-xl px-5 py-3 text-white font-bold shadow-lg border-2 border-white/30 min-w-[200px] text-center" style="background:${bg};">
+        factorial(${f.n}) ${f.val != null ? '= ' + f.val : ''}
+      </div>`;
+    });
+    if (frames.length === 0) {
+      html += `<div class="text-slate-400 italic">调用完成</div>`;
+    }
+    html += `</div></div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* ============================================
+ *  20) DP - Fibonacci
+ * ============================================ */
+Algorithms.dp = {
+  title: '动态规划 (斐波那契)',
+  icon: 'fa-table',
+  category: '算法技巧',
+  code: {
+    python: [
+      'def fib(n):',
+      '    dp = [0] * (n + 1)',
+      '    dp[1] = 1',
+      '    for i in range(2, n + 1):',
+      '        dp[i] = dp[i-1] + dp[i-2]',
+      '    return dp[n]',
+      '',
+      'print(fib(9))  # 34'
+    ],
+    java: [
+      'int fib(int n) {',
+      '    int[] dp = new int[n + 1];',
+      '    dp[1] = 1;',
+      '    for (int i = 2; i <= n; i++) {',
+      '        dp[i] = dp[i-1] + dp[i-2];',
+      '    }',
+      '    return dp[n];',
+      '}'
+    ],
+    cpp: [
+      'int fib(int n) {',
+      '    vector<int> dp(n + 1, 0);',
+      '    dp[1] = 1;',
+      '    for (int i = 2; i <= n; i++) {',
+      '        dp[i] = dp[i-1] + dp[i-2];',
+      '    }',
+      '    return dp[n];',
+      '}'
+    ],
+    js: [
+      'function fib(n) {',
+      '  const dp = new Array(n + 1).fill(0);',
+      '  dp[1] = 1;',
+      '  for (let i = 2; i <= n; i++) {',
+      '    dp[i] = dp[i-1] + dp[i-2];',
+      '  }',
+      '  return dp[n];',
+      '}'
+    ],
+    go: [
+      'func fib(n int) int {',
+      '    dp := make([]int, n+1)',
+      '    dp[1] = 1',
+      '    for i := 2; i <= n; i++ {',
+      '        dp[i] = dp[i-1] + dp[i-2]',
+      '    }',
+      '    return dp[n]',
+      '}'
+    ],
+    c: [
+      'int fib(int n) {',
+      '    int dp[100] = {0};',
+      '    dp[1] = 1;',
+      '    for (int i = 2; i <= n; i++) {',
+      '        dp[i] = dp[i-1] + dp[i-2];',
+      '    }',
+      '    return dp[n];',
+      '}'
+    ]
+  },
+  build() {
+    const n = 9; const dp = new Array(n+1).fill(0);
+    const steps = [];
+    steps.push({line:1, desc:`创建 dp 数组，长度 ${n+1}`, dp:[...dp]});
+    dp[1] = 1;
+    steps.push({line:2, desc:`dp[0]=0, dp[1]=1 为基础`, dp:[...dp], highlight:[0,1]});
+    for (let i = 2; i <= n; i++) {
+      steps.push({line:3, desc:`i = ${i}`, dp:[...dp], pointer:i});
+      dp[i] = dp[i-1] + dp[i-2];
+      steps.push({line:4, desc:`dp[${i}] = dp[${i-1}] + dp[${i-2}] = ${dp[i-1]} + ${dp[i-2]} = ${dp[i]}`, dp:[...dp], pointer:i, deps:[i-1, i-2], highlight:[i]});
+    }
+    steps.push({line:5, desc:`返回 dp[${n}] = ${dp[n]}`, dp:[...dp], highlight:[n]});
+    return steps;
+  },
+  render(state) {
+    const stage = document.getElementById('animStage');
+    const dp = state.dp || [];
+    const n = dp.length;
+    const cellW = Math.min(56, Math.floor((stage.clientWidth - 60) / n));
+    let html = `<div class="h-full flex flex-col justify-center">`;
+    html += `<div class="text-center text-slate-600 dark:text-slate-300 font-semibold mb-1">动态规划 · 斐波那契</div>`;
+    html += `<div class="text-center text-xs text-slate-500 dark:text-slate-400 mb-4">dp[i] = dp[i-1] + dp[i-2]</div>`;
+
+    // pointer row
+    html += `<div class="flex justify-center gap-1 mb-1 h-6">`;
+    dp.forEach((_, i) => {
+      html += `<div style="width:${cellW}px" class="text-center">${state.pointer === i ? '<i class="fa-solid fa-caret-down text-brand-500"></i>' : ''}</div>`;
+    });
+    html += `</div>`;
+
+    html += `<div class="flex justify-center gap-1 mb-2">`;
+    dp.forEach((v, i) => {
+      let bg = 'linear-gradient(135deg,#cbd5e1,#94a3b8)';
+      if ((state.highlight || []).includes(i)) bg = 'linear-gradient(135deg,#fbbf24,#f59e0b)';
+      else if ((state.deps || []).includes(i)) bg = 'linear-gradient(135deg,#f472b6,#ec4899)';
+      else if (v > 0 || i === 0) bg = 'linear-gradient(135deg,#60a5fa,#3b82f6)';
+      html += `<div class="arr-cell rounded-lg flex flex-col items-center justify-center text-white font-bold shadow" style="width:${cellW}px; height:${cellW}px; background:${bg};">
+        <div class="text-xs opacity-75">dp[${i}]</div>
+        <div class="text-base">${v}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<div class="flex justify-center gap-1">`;
+    dp.forEach((_, i) => {
+      html += `<div style="width:${cellW}px" class="text-center text-xs text-slate-400">${i}</div>`;
+    });
+    html += `</div>`;
+    html += `</div>`;
+    stage.innerHTML = html;
+  }
+};
+
+/* =========================================================
+ *  ORDER OF ALGORITHMS (for nav)
+ * ========================================================= */
+const AlgoOrder = [
+  { key: 'bubbleSort', group: '排序算法' },
+  { key: 'selectionSort' },
+  { key: 'insertionSort' },
+  { key: 'quickSort' },
+  { key: 'mergeSort' },
+  { key: 'linearSearch', group: '查找' },
+  { key: 'binarySearch' },
+  { key: 'stack', group: '数据结构' },
+  { key: 'queue' },
+  { key: 'linkedList' },
+  { key: 'hashTable' },
+  { key: 'binaryTree', group: '树 & 堆' },
+  { key: 'bst' },
+  { key: 'heap' },
+  { key: 'bfs', group: '图' },
+  { key: 'dfs' },
+  { key: 'slidingWindow', group: '技巧' },
+  { key: 'twoPointers' },
+  { key: 'recursion' },
+  { key: 'dp' },
+];
+
+/* =========================================================
+ *  GLOBAL CONTROLLER
+ * ========================================================= */
+const State = {
+  currentAlgo: 'bubbleSort',
+  currentLang: 'python',
+  step: 0,
+  steps: [],
+  playing: false,
+  playTimer: null,
+};
+
+const SupportedLangs = ['python','java','cpp','c','js','go'];
+const LangLabels = { python:'Python', java:'Java', cpp:'C++', c:'C', js:'JavaScript', go:'Go' };
+const AlgoOperationHints = {
+  bubbleSort: '支持操作: 相邻比较、交换、多轮遍历。',
+  selectionSort: '支持操作: 在未排序区间寻找最小值、交换到前端。',
+  insertionSort: '支持操作: 取 key、向后移动、插入到有序区间。',
+  quickSort: '支持操作: 选 pivot、分区、递归处理子区间。',
+  mergeSort: '支持操作: 分治拆分、双指针合并、有序回写。',
+  linearSearch: '支持操作: 顺序遍历、逐项比较、命中返回。',
+  binarySearch: '支持操作: 维护左右边界、中点比较、区间折半。',
+  stack: '支持操作: push、pop、peek。',
+  queue: '支持操作: enqueue(入队)、dequeue(出队)、front。',
+  linkedList: '支持操作: 遍历、插入节点、删除节点、重连 next 指针。',
+  hashTable: '支持操作: hash 定位、插入、冲突链处理、查询。',
+  binaryTree: '支持操作: 递归遍历(左根右)、访问节点。',
+  bst: '支持操作: 按大小向左/右查找、命中返回。',
+  heap: '支持操作: push 上浮、pop 下沉、维护堆序。',
+  bfs: '支持操作: 队列推进、按层遍历、visited 去重。',
+  dfs: '支持操作: 递归/栈深度探索、回溯。',
+  slidingWindow: '支持操作: 右扩左缩、维护窗口统计。',
+  twoPointers: '支持操作: 双指针同向/相向移动、条件收敛。',
+  recursion: '支持操作: 递归调用、终止条件、回溯返回。',
+  dp: '支持操作: 状态定义、状态转移、表格填充。'
+};
+
+const AlgoKeywordHints = {
+  bubbleSort: ['for', 'if'],
+  selectionSort: ['for', 'min', 'if'],
+  insertionSort: ['while', 'for', 'key'],
+  quickSort: ['pivot', 'if', 'for'],
+  mergeSort: ['merge', 'while', 'for'],
+  linearSearch: ['for', 'if'],
+  binarySearch: ['while', 'mid', 'left', 'right', 'l', 'r'],
+  stack: ['push', 'pop', 'peek', 'top'],
+  queue: ['enqueue', 'dequeue', 'offer', 'poll', 'push', 'shift'],
+  linkedList: ['node', 'next', 'insert', 'delete'],
+  hashTable: ['hash', 'put', 'set', 'map'],
+  binaryTree: ['left', 'right', 'root'],
+  bst: ['left', 'right', 'target'],
+  heap: ['heap', 'push', 'pop'],
+  bfs: ['queue', 'visited'],
+  dfs: ['dfs', 'visited', 'recursion'],
+  slidingWindow: ['left', 'right', 'window'],
+  twoPointers: ['left', 'right'],
+  recursion: ['return', 'if'],
+  dp: ['dp', 'state', 'for']
+};
+
+function commentPrefix(lang) {
+  return lang === 'python' ? '# ' : '// ';
+}
+
+function buildCommentTemplate(lines, lang, title) {
+  const p = commentPrefix(lang);
+  const head = [
+    `${p}${title} 输入模板（可自由改写）`,
+    `${p}说明: 只要核心原理对应，就能驱动左侧动画。`,
+    `${p}你可以直接在下面写你的实现。`,
+    ''
+  ];
+  const body = lines.map(line => `${p}${line}`);
+  return [...head, ...body].join('\n');
+}
+
+function updateOperationHint() {
+  const hintEl = document.getElementById('opHint');
+  const hint = AlgoOperationHints[State.currentAlgo] || '支持操作: 请按当前算法原理实现。';
+  hintEl.textContent = hint;
+}
+
+function clearCodeError() {
+  const el = document.getElementById('codeError');
+  el.classList.add('hidden');
+  el.textContent = '';
+}
+
+function showCodeError(msg) {
+  const el = document.getElementById('codeError');
+  el.textContent = `代码检查提示: ${msg}`;
+  el.classList.remove('hidden');
+}
+
+function stripInlineComments(line, lang) {
+  const idx = lang === 'python' ? line.indexOf('#') : line.indexOf('//');
+  if (idx === -1) return line;
+  return line.slice(0, idx);
+}
+
+function validateUserCode(code, algoKey, lang) {
+  if (!code || !code.trim()) {
+    return { ok: false, msg: '输入区为空，请先输入代码。' };
+  }
+  const rawLines = code.split('\n');
+  const pure = rawLines.map(line => stripInlineComments(line, lang).trim()).join(' ');
+  if (!pure.trim()) {
+    return { ok: false, msg: '当前全是注释，请至少补充一段可执行逻辑。' };
+  }
+
+  // 平衡括号检查
+  const pairs = { ')': '(', ']': '[', '}': '{' };
+  const opens = new Set(['(', '[', '{']);
+  const stack = [];
+  for (const ch of pure) {
+    if (opens.has(ch)) stack.push(ch);
+    else if (pairs[ch]) {
+      if (stack.pop() !== pairs[ch]) {
+        return { ok: false, msg: '括号不匹配，请检查 () [] {}。' };
+      }
+    }
+  }
+  if (stack.length) {
+    return { ok: false, msg: '括号未闭合，请补全括号。' };
+  }
+
+  const normalized = pure.toLowerCase();
+  const hints = AlgoKeywordHints[algoKey] || [];
+  if (hints.length && !hints.some(k => normalized.includes(k))) {
+    return { ok: false, msg: `当前代码与“${Algorithms[algoKey].title}”原理不够匹配，建议至少包含关键词: ${hints.slice(0, 3).join(' / ')}。` };
+  }
+  return { ok: true, msg: '' };
+}
+
+function ensureCodeValidBeforeRun() {
+  const code = document.getElementById('codeInput').value;
+  const result = validateUserCode(code, State.currentAlgo, State.currentLang);
+  if (!result.ok) {
+    showCodeError(result.msg);
+    return false;
+  }
+  clearCodeError();
+  return true;
+}
+
+function resetCodeInputByAlgoAndLang() {
+  const algo = Algorithms[State.currentAlgo];
+  const lines = algo.code[State.currentLang] || algo.code.python;
+  document.getElementById('codeInput').value = buildCommentTemplate(lines, State.currentLang, algo.title);
+  clearCodeError();
+}
+
+function resolveLine(algo, state, lang) {
+  // If step has raw .line use it; otherwise map via lineMap
+  if (state.line != null) return state.line;
+  if (state.lineKey && algo.lineMap && algo.lineMap[lang]) {
+    return algo.lineMap[lang][state.lineKey];
+  }
+  return 0;
+}
+
+function loadAlgorithm(key) {
+  State.currentAlgo = key;
+  const algo = Algorithms[key];
+  State.steps = algo.build();
+  State.step = 0;
+  document.getElementById('algoTitle').textContent = algo.title;
+  resetCodeInputByAlgoAndLang();
+  updateOperationHint();
+  updateView();
+  // update nav active
+  document.querySelectorAll('#algoNav [data-algo]').forEach(el => {
+    el.classList.toggle('active', el.dataset.algo === key);
+  });
+}
+
+function updateView() {
+  const algo = Algorithms[State.currentAlgo];
+  const s = State.steps[State.step];
+  if (!s) return;
+  // highlight line
+  const line = resolveLine(algo, s, State.currentLang);
+  highlightLine(line);
+  // render animation
+  algo.render(s, State.currentLang);
+  // description
+  document.getElementById('descText').textContent = s.desc || '';
+  // pill
+  document.getElementById('stepPill').innerHTML =
+    `<i class="fa-solid fa-circle-play text-[10px]"></i> Step ${State.step + 1} / ${State.steps.length}`;
+  // buttons
+  document.getElementById('btnPrev').disabled = State.step === 0;
+  document.getElementById('btnNext').disabled = State.step >= State.steps.length - 1;
+}
+
+function step(delta) {
+  const ns = State.step + delta;
+  if (ns < 0 || ns >= State.steps.length) return false;
+  State.step = ns;
+  updateView();
+  return true;
+}
+
+function reset() {
+  stopPlay();
+  State.step = 0;
+  updateView();
+}
+
+function startPlay() {
+  if (State.playing) return;
+  if (!ensureCodeValidBeforeRun()) return;
+  State.playing = true;
+  document.getElementById('playIcon').classList.replace('fa-play', 'fa-pause');
+  document.getElementById('playText').textContent = '暂停';
+  const speed = +document.getElementById('speedRange').value;
+  State.playTimer = setInterval(() => {
+    if (!step(1)) stopPlay();
+  }, speed);
+}
+function stopPlay() {
+  State.playing = false;
+  clearInterval(State.playTimer);
+  document.getElementById('playIcon').classList.replace('fa-pause', 'fa-play');
+  document.getElementById('playText').textContent = '自动播放';
+}
+function togglePlay() {
+  if (State.playing) stopPlay(); else startPlay();
+}
+
+/* ------- Build nav ------- */
+function buildNav() {
+  const nav = document.getElementById('algoNav');
+  nav.innerHTML = '';
+  AlgoOrder.forEach(({key, group}) => {
+    if (group) {
+      const label = document.createElement('span');
+      label.className = 'text-xs font-semibold text-slate-400 dark:text-slate-500 px-2 mx-1 uppercase tracking-wide';
+      label.textContent = group;
+      nav.appendChild(label);
+    }
+    const a = Algorithms[key];
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn flex items-center gap-2 px-3 h-9 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap';
+    btn.dataset.algo = key;
+    btn.innerHTML = `<i class="fa-solid ${a.icon}"></i><span>${a.title}</span>`;
+    btn.addEventListener('click', () => { stopPlay(); loadAlgorithm(key); });
+    nav.appendChild(btn);
+  });
+}
+
+/* ------- Build lang tabs ------- */
+function buildLangTabs() {
+  const box = document.getElementById('langTabs');
+  box.innerHTML = '';
+  SupportedLangs.forEach(lang => {
+    const btn = document.createElement('button');
+    btn.className = 'lang-btn' + (lang === State.currentLang ? ' active' : '');
+    btn.textContent = LangLabels[lang];
+    btn.dataset.lang = lang;
+    btn.addEventListener('click', () => {
+      State.currentLang = lang;
+      document.querySelectorAll('#langTabs .lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+      resetCodeInputByAlgoAndLang();
+      updateView();
+    });
+    box.appendChild(btn);
+  });
+}
+
+/* ------- Theme toggle ------- */
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'light';
+  if (saved === 'dark') document.documentElement.classList.add('dark');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  });
+}
+
+/* ------- Bind controls ------- */
+function bindControls() {
+  document.getElementById('btnNext').addEventListener('click', () => {
+    stopPlay();
+    if (!ensureCodeValidBeforeRun()) return;
+    step(1);
+  });
+  document.getElementById('btnPrev').addEventListener('click', () => { stopPlay(); step(-1); });
+  document.getElementById('btnReset').addEventListener('click', reset);
+  document.getElementById('btnPlay').addEventListener('click', togglePlay);
+  document.getElementById('speedRange').addEventListener('input', () => {
+    if (State.playing) { stopPlay(); startPlay(); }
+  });
+  // keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') { stopPlay(); step(1); }
+    if (e.key === 'ArrowLeft')  { stopPlay(); step(-1); }
+    if (e.key === ' ')          { e.preventDefault(); togglePlay(); }
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+  // window resize → re-render current animation (cells depend on width)
+  window.addEventListener('resize', () => updateView());
+
+  document.getElementById('codeInput').addEventListener('input', () => {
+    clearCodeError();
+  });
+}
+
+/* ------- INIT ------- */
+window.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  buildNav();
+  buildLangTabs();
+  bindControls();
+  loadAlgorithm('bubbleSort');
+});
+</script>
+</body>
+</html>
