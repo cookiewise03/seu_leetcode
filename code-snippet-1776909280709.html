@@ -127,6 +127,45 @@
     color: #d4d4d4;
   }
 
+  .code-editor-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 500px;
+    overflow: hidden;
+  }
+
+  .code-editor-layer {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 12px 0;
+    overflow: auto;
+    tab-size: 2;
+    white-space: pre;
+  }
+
+  #codeHighlight {
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #codeInput {
+    z-index: 2;
+    background: transparent;
+    color: transparent;
+    caret-color: #d4d4d4;
+    border: 0;
+    outline: none;
+    resize: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  #codeInput::selection {
+    background: rgba(59, 130, 246, 0.35);
+    color: transparent;
+  }
+
   .status-pill {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 4px 12px; border-radius: 999px;
@@ -272,7 +311,10 @@
         输入区已改为可手动编辑。默认模板是带中文注释的参考代码，你可以自由改写，原理对应即可运行演示。
       </div>
 
-      <textarea id="codeInput" class="code-container flex-1 w-full resize-none px-4 py-3 border-0 outline-none" style="min-height: 500px;"></textarea>
+      <div class="code-container code-editor-wrap">
+        <pre id="codeHighlight" class="code-editor-layer" aria-hidden="true"></pre>
+        <textarea id="codeInput" class="code-editor-layer" spellcheck="false"></textarea>
+      </div>
 
       <div id="codeError" class="mx-5 mb-4 mt-3 hidden rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200/80 dark:border-rose-700/40 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
         <!-- error message -->
@@ -3491,7 +3533,41 @@ function resetCodeInputByAlgoAndLang() {
   const algo = Algorithms[State.currentAlgo];
   const lines = algo.code[State.currentLang] || algo.code.python;
   document.getElementById('codeInput').value = buildCommentTemplate(lines, State.currentLang, algo.title);
+  updateCodeHighlight();
   clearCodeError();
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function updateCodeHighlight() {
+  const ta = document.getElementById('codeInput');
+  const hl = document.getElementById('codeHighlight');
+  const lines = ta.value.split('\n');
+  const rendered = (lines.length ? lines : ['']).map((line, idx) => {
+    const safe = escapeHtml(line);
+    const colored = highlightCode(safe, State.currentLang) || ' ';
+    return `<div class="code-line"><span class="line-num">${idx + 1}</span><span class="line-content">${colored}</span></div>`;
+  }).join('');
+  hl.innerHTML = rendered;
+}
+
+function syncEditorScroll() {
+  const ta = document.getElementById('codeInput');
+  const hl = document.getElementById('codeHighlight');
+  hl.scrollTop = ta.scrollTop;
+  hl.scrollLeft = ta.scrollLeft;
+}
+
+function insertTabAtCursor() {
+  const ta = document.getElementById('codeInput');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const val = ta.value;
+  ta.value = val.slice(0, start) + '\t' + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + 1;
+  updateCodeHighlight();
 }
 
 function resolveLine(algo, state, lang) {
@@ -3653,6 +3729,17 @@ function bindControls() {
 
   document.getElementById('codeInput').addEventListener('input', () => {
     clearCodeError();
+    updateCodeHighlight();
+  });
+
+  document.getElementById('codeInput').addEventListener('scroll', syncEditorScroll);
+
+  document.getElementById('codeInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      insertTabAtCursor();
+      return;
+    }
   });
 }
 
