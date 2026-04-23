@@ -239,6 +239,9 @@
           <button id="btnPlay" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm">
             <i class="fa-solid fa-play" id="playIcon"></i> <span id="playText">自动播放</span>
           </button>
+          <button id="btnValidate" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-emerald-500 text-white font-medium text-sm shadow-lg shadow-emerald-500/30">
+            <i class="fa-solid fa-check-double"></i> 运行校验
+          </button>
           <div class="flex items-center gap-2 ml-auto text-xs text-slate-500 dark:text-slate-400">
             <span>速度</span>
             <input id="speedRange" type="range" min="200" max="2000" step="100" value="800" class="w-24 accent-brand-500" />
@@ -3339,13 +3342,24 @@ function updateOperationHint() {
 
 function clearCodeError() {
   const el = document.getElementById('codeError');
+  el.className = 'mx-5 mb-4 mt-3 hidden rounded-lg px-3 py-2 text-sm';
   el.classList.add('hidden');
   el.textContent = '';
 }
 
-function showCodeError(msg) {
+function showCodeStatus(type, msg) {
   const el = document.getElementById('codeError');
-  el.textContent = `代码检查提示: ${msg}`;
+  el.className = 'mx-5 mb-4 mt-3 rounded-lg px-3 py-2 text-sm';
+  if (type === 'error') {
+    el.classList.add('bg-rose-50', 'dark:bg-rose-900/20', 'border', 'border-rose-200/80', 'dark:border-rose-700/40', 'text-rose-700', 'dark:text-rose-300');
+    el.textContent = `代码检查提示: ${msg}`;
+  } else if (type === 'warn') {
+    el.classList.add('bg-amber-50', 'dark:bg-amber-900/20', 'border', 'border-amber-200/80', 'dark:border-amber-700/40', 'text-amber-700', 'dark:text-amber-300');
+    el.textContent = `代码检查提醒: ${msg}`;
+  } else {
+    el.classList.add('bg-emerald-50', 'dark:bg-emerald-900/20', 'border', 'border-emerald-200/80', 'dark:border-emerald-700/40', 'text-emerald-700', 'dark:text-emerald-300');
+    el.textContent = `代码检查通过: ${msg}`;
+  }
   el.classList.remove('hidden');
 }
 
@@ -3355,14 +3369,67 @@ function stripInlineComments(line, lang) {
   return line.slice(0, idx);
 }
 
+function normalizeCodeLines(code, lang) {
+  const raw = code.split('\n');
+  const lines = raw
+    .map(line => stripInlineComments(line, lang))
+    .map(line => line.trimEnd());
+  return lines.filter(line => line.trim() !== '');
+}
+
+function validatePython(lines) {
+  const blockStarts = /^(def|if|elif|else|for|while|class|try|except|with)\b/;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (blockStarts.test(t) && !t.endsWith(':')) {
+      return { ok: false, msg: `第 ${i + 1} 行看起来像 Python 代码块起始语句，但缺少冒号 :` };
+    }
+  }
+  return { ok: true, msg: '' };
+}
+
+function validateSemicolonStyle(lines, lang) {
+  const warns = [];
+  const skip = /^(if|for|while|switch|else|do|class|struct|enum|func|def|import|package|return\s*\{|\{|\})\b/;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t || t.endsWith(';') || t.endsWith('{') || t.endsWith('}') || skip.test(t)) continue;
+    if (lang === 'java' || lang === 'cpp' || lang === 'c' || lang === 'js') {
+      if (!t.includes('=>') && !t.startsWith('function') && !t.startsWith('class')) {
+        warns.push(`第 ${i + 1} 行可能缺少分号 ;`);
+        if (warns.length >= 2) break;
+      }
+    }
+  }
+  return warns;
+}
+
+function validateLanguageRules(lines, lang) {
+  if (lang === 'python') {
+    return validatePython(lines);
+  }
+  if (lang === 'go') {
+    const hasFunc = lines.some(line => /\bfunc\b/.test(line));
+    if (!hasFunc) {
+      return { ok: false, msg: 'Go 代码建议包含 func 定义或调用。' };
+    }
+    return { ok: true, msg: '' };
+  }
+  const hasBraceStyle = lines.some(line => line.includes('{') || line.includes('}'));
+  if (!hasBraceStyle && (lang === 'java' || lang === 'cpp' || lang === 'c' || lang === 'js')) {
+    return { ok: false, msg: '当前语言通常需要使用花括号 { } 表达代码块，请检查。' };
+  }
+  return { ok: true, msg: '' };
+}
+
 function validateUserCode(code, algoKey, lang) {
   if (!code || !code.trim()) {
-    return { ok: false, msg: '输入区为空，请先输入代码。' };
+    return { ok: false, msg: '输入区为空，请先输入代码。', warns: [] };
   }
-  const rawLines = code.split('\n');
-  const pure = rawLines.map(line => stripInlineComments(line, lang).trim()).join(' ');
+  const lines = normalizeCodeLines(code, lang);
+  const pure = lines.map(line => line.trim()).join(' ');
   if (!pure.trim()) {
-    return { ok: false, msg: '当前全是注释，请至少补充一段可执行逻辑。' };
+    return { ok: false, msg: '当前全是注释，请至少补充一段可执行逻辑。', warns: [] };
   }
 
   // 平衡括号检查
@@ -3373,31 +3440,51 @@ function validateUserCode(code, algoKey, lang) {
     if (opens.has(ch)) stack.push(ch);
     else if (pairs[ch]) {
       if (stack.pop() !== pairs[ch]) {
-        return { ok: false, msg: '括号不匹配，请检查 () [] {}。' };
+        return { ok: false, msg: '括号不匹配，请检查 () [] {}。', warns: [] };
       }
     }
   }
   if (stack.length) {
-    return { ok: false, msg: '括号未闭合，请补全括号。' };
+    return { ok: false, msg: '括号未闭合，请补全括号。', warns: [] };
   }
+
+  const langRule = validateLanguageRules(lines, lang);
+  if (!langRule.ok) {
+    return { ok: false, msg: langRule.msg, warns: [] };
+  }
+
+  const warns = validateSemicolonStyle(lines, lang);
 
   const normalized = pure.toLowerCase();
   const hints = AlgoKeywordHints[algoKey] || [];
   if (hints.length && !hints.some(k => normalized.includes(k))) {
-    return { ok: false, msg: `当前代码与“${Algorithms[algoKey].title}”原理不够匹配，建议至少包含关键词: ${hints.slice(0, 3).join(' / ')}。` };
+    warns.push(`当前代码与“${Algorithms[algoKey].title}”原理匹配度偏低，建议至少包含关键词: ${hints.slice(0, 3).join(' / ')}。`);
   }
-  return { ok: true, msg: '' };
+  return { ok: true, msg: '', warns };
 }
 
-function ensureCodeValidBeforeRun() {
+function ensureCodeValidBeforeRun(showSuccess = false) {
   const code = document.getElementById('codeInput').value;
   const result = validateUserCode(code, State.currentAlgo, State.currentLang);
   if (!result.ok) {
-    showCodeError(result.msg);
+    showCodeStatus('error', result.msg);
     return false;
   }
-  clearCodeError();
+
+  if (result.warns && result.warns.length) {
+    showCodeStatus('warn', result.warns.join('；'));
+    return true;
+  }
+  if (showSuccess) {
+    showCodeStatus('ok', '语法与结构检查通过，可以点击前进或自动播放。');
+  } else {
+    clearCodeError();
+  }
   return true;
+}
+
+function runCodeValidation() {
+  ensureCodeValidBeforeRun(true);
 }
 
 function resetCodeInputByAlgoAndLang() {
@@ -3545,13 +3632,18 @@ function bindControls() {
   document.getElementById('btnPrev').addEventListener('click', () => { stopPlay(); step(-1); });
   document.getElementById('btnReset').addEventListener('click', reset);
   document.getElementById('btnPlay').addEventListener('click', togglePlay);
+  document.getElementById('btnValidate').addEventListener('click', runCodeValidation);
   document.getElementById('speedRange').addEventListener('input', () => {
     if (State.playing) { stopPlay(); startPlay(); }
   });
   // keyboard
   document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
-    if (e.key === 'ArrowRight') { stopPlay(); step(1); }
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowRight') {
+      stopPlay();
+      if (!ensureCodeValidBeforeRun()) return;
+      step(1);
+    }
     if (e.key === 'ArrowLeft')  { stopPlay(); step(-1); }
     if (e.key === ' ')          { e.preventDefault(); togglePlay(); }
     if (e.key === 'r' || e.key === 'R') reset();
