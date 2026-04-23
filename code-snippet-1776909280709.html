@@ -302,6 +302,15 @@
           </div>
         </div>
 
+        <div class="mt-4 rounded-xl bg-white/80 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/50 p-3">
+          <div class="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+            <i class="fa-solid fa-sliders text-indigo-500"></i>
+            初始化配置 (JSON)
+          </div>
+          <textarea id="initInput" class="w-full h-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400/50 resize-y" spellcheck="false" wrap="off"></textarea>
+          <p class="mt-2 text-[11px] text-slate-500 dark:text-slate-400">直接修改这里的初始化，点击“应用初始化”后会重建左侧动画；代码输入区只负责展示与行高亮。</p>
+        </div>
+
         <!-- Controls -->
         <div class="mt-4 flex items-center gap-2 flex-wrap">
           <button id="btnReset" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm">
@@ -647,6 +656,67 @@ Algorithms.bubbleSort = {
 };
 
 function range(a,b){const r=[];for(let i=a;i<b;i++)r.push(i);return r;}
+
+function buildLevelTree(levelOrder) {
+  const values = Array.isArray(levelOrder) ? levelOrder : [];
+  const nodes = [null];
+  values.forEach((v, i) => {
+    if (v == null) {
+      nodes.push(null);
+      return;
+    }
+    const num = Number(v);
+    nodes.push(Number.isFinite(num) ? { id: i + 1, val: num, left: null, right: null } : null);
+  });
+  for (let i = 1; i < nodes.length; i++) {
+    if (!nodes[i]) continue;
+    const l = i * 2;
+    const r = i * 2 + 1;
+    nodes[i].left = nodes[l] ? l : null;
+    nodes[i].right = nodes[r] ? r : null;
+  }
+  if (!nodes[1]) {
+    nodes[1] = { id: 1, val: 1, left: null, right: null };
+  }
+  return nodes;
+}
+
+function buildGraphFromInit(init, defaultEdges, defaultStart) {
+  const rawEdges = Array.isArray(init?.edges) && init.edges.length ? init.edges : defaultEdges;
+  const edges = rawEdges
+    .filter(e => Array.isArray(e) && e.length === 2)
+    .map(e => [Number(e[0]), Number(e[1])])
+    .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b) && a > 0 && b > 0);
+
+  const idSet = new Set();
+  edges.forEach(([a, b]) => { idSet.add(a); idSet.add(b); });
+  if (!idSet.size) {
+    idSet.add(defaultStart || 1);
+  }
+  const ids = [...idSet].sort((a, b) => a - b);
+  const n = ids.length;
+  const nodes = {};
+  ids.forEach((id, idx) => {
+    const angle = (-Math.PI / 2) + (2 * Math.PI * idx / Math.max(1, n));
+    nodes[id] = {
+      x: 260 + Math.cos(angle) * 150,
+      y: 170 + Math.sin(angle) * 110
+    };
+  });
+  const adj = {};
+  ids.forEach(id => { adj[id] = []; });
+  edges.forEach(([a, b]) => {
+    if (!adj[a]) adj[a] = [];
+    if (!adj[b]) adj[b] = [];
+    adj[a].push(b);
+    adj[b].push(a);
+  });
+  Object.keys(adj).forEach(k => adj[k].sort((a, b) => a - b));
+
+  let start = Number.isFinite(Number(init?.start)) ? Number(init.start) : defaultStart;
+  if (!adj[start]) start = ids[0];
+  return { nodes, edges, adj, start };
+}
 
 /* ============================================
  *  2) SELECTION SORT
@@ -1363,7 +1433,7 @@ Algorithms.binarySearch = {
     c:     {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
   },
   build(init = {}) {
-    const arr = Array.isArray(init.array) && init.array.length ? [...init.array] : [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+    const arr = Array.isArray(init.array) && init.array.length ? [...init.array].sort((a,b)=>a-b) : [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
     const target = Number.isFinite(init.target) ? init.target : 13; const steps = [];
     steps.push({lineKey:'init', desc:`初始化 l=0, r=${arr.length-1}，查找 target=${target}`, arr, pointers:{l:0, r:arr.length-1}});
     let l = 0, r = arr.length - 1;
@@ -1554,17 +1624,25 @@ Algorithms.stack = {
       '// top = 0'
     ]
   },
-  build() {
-    return [
-      {line:0, desc:`初始化空栈`, stack:[], action:'init'},
-      {line:1, desc:`push(10)`, stack:[10], action:'push', value:10},
-      {line:2, desc:`push(20)`, stack:[10,20], action:'push', value:20},
-      {line:3, desc:`push(30)`, stack:[10,20,30], action:'push', value:30},
-      {line:4, desc:`peek() → 查看栈顶 = 30`, stack:[10,20,30], action:'peek'},
-      {line:5, desc:`pop() → 弹出 30`, stack:[10,20], action:'pop', value:30},
-      {line:6, desc:`pop() → 弹出 20`, stack:[10], action:'pop', value:20},
-      {line:7, desc:`当前栈：[10]`, stack:[10], action:'done'}
-    ];
+  build(init = {}) {
+    const base = Array.isArray(init.initial) && init.initial.length ? init.initial.map(Number).filter(Number.isFinite) : [10, 20, 30];
+    const pops = Math.min(base.length, Math.max(0, Number.isFinite(Number(init.pops)) ? Number(init.pops) : 2));
+    const steps = [];
+    const s = [];
+    steps.push({line:0, desc:`初始化空栈`, stack:[...s], action:'init'});
+    base.forEach((v, idx) => {
+      s.push(v);
+      steps.push({line:Math.min(1 + idx, 3), desc:`push(${v})`, stack:[...s], action:'push', value:v});
+    });
+    if (s.length) {
+      steps.push({line:4, desc:`peek() → 查看栈顶 = ${s[s.length - 1]}`, stack:[...s], action:'peek'});
+    }
+    for (let i = 0; i < pops; i++) {
+      const v = s.pop();
+      steps.push({line:Math.min(5 + i, 6), desc:`pop() → 弹出 ${v}`, stack:[...s], action:'pop', value:v});
+    }
+    steps.push({line:7, desc:`当前栈：[${s.join(', ')}]`, stack:[...s], action:'done'});
+    return steps;
   },
   render(state) {
     const stage = document.getElementById('animStage');
@@ -1673,16 +1751,22 @@ Algorithms.queue = {
       '// remaining: 30'
     ]
   },
-  build() {
-    return [
-      {line:1, desc:`初始化空队列`, q:[], action:'init'},
-      {line:2, desc:`enqueue(10) 从队尾入队`, q:[10], action:'enq', value:10},
-      {line:3, desc:`enqueue(20)`, q:[10,20], action:'enq', value:20},
-      {line:4, desc:`enqueue(30)`, q:[10,20,30], action:'enq', value:30},
-      {line:5, desc:`dequeue() 从队首出队 → 10`, q:[20,30], action:'deq', value:10},
-      {line:6, desc:`dequeue() → 20`, q:[30], action:'deq', value:20},
-      {line:7, desc:`当前队列：[30]`, q:[30], action:'done'}
-    ];
+  build(init = {}) {
+    const base = Array.isArray(init.initial) && init.initial.length ? init.initial.map(Number).filter(Number.isFinite) : [10, 20, 30];
+    const dequeues = Math.min(base.length, Math.max(0, Number.isFinite(Number(init.dequeues)) ? Number(init.dequeues) : 2));
+    const q = [];
+    const steps = [];
+    steps.push({line:1, desc:`初始化空队列`, q:[...q], action:'init'});
+    base.forEach((v, idx) => {
+      q.push(v);
+      steps.push({line:Math.min(2 + idx, 4), desc:`enqueue(${v})`, q:[...q], action:'enq', value:v});
+    });
+    for (let i = 0; i < dequeues; i++) {
+      const v = q.shift();
+      steps.push({line:Math.min(5 + i, 6), desc:`dequeue() → ${v}`, q:[...q], action:'deq', value:v});
+    }
+    steps.push({line:7, desc:`当前队列：[${q.join(', ')}]`, q:[...q], action:'done'});
+    return steps;
   },
   render(state) {
     const stage = document.getElementById('animStage');
@@ -1810,20 +1894,26 @@ Algorithms.linkedList = {
       'head->next->next->next->next = NULL;'
     ]
   },
-  build() {
-    return [
-      {line:0, desc:`定义节点结构 {val, next}`, list:[], highlight:-1},
-      {line:1, desc:`创建头节点 1`, list:[1], highlight:0},
-      {line:2, desc:`链接 1 → 2`, list:[1,2], highlight:1},
-      {line:3, desc:`链接 1 → 2 → 3`, list:[1,2,3], highlight:2},
-      {line:4, desc:`链接 1 → 2 → 3 → 4`, list:[1,2,3,4], highlight:3},
-      {line:5, desc:`准备在 2 与 3 之间插入 5`, list:[1,2,3,4], highlight:-1, insert:{at:2}},
-      {line:6, desc:`创建新节点 5`, list:[1,2,3,4], highlight:-1, insert:{at:2, newVal:5}},
-      {line:7, desc:`new.next 指向 3`, list:[1,2,3,4], highlight:-1, insert:{at:2, newVal:5, linking:true}},
-      {line:8, desc:`2.next 指向 new → [1,2,5,3,4]`, list:[1,2,5,3,4], highlight:2},
-      {line:9, desc:`准备删除末尾节点 4`, list:[1,2,5,3,4], highlight:4, del:true},
-      {line:10, desc:`3.next = null → [1,2,5,3]`, list:[1,2,5,3], highlight:-1},
-    ];
+  build(init = {}) {
+    const list = Array.isArray(init.list) && init.list.length >= 2 ? init.list.map(Number).filter(Number.isFinite) : [1,2,3,4];
+    const insertAt = Math.min(Math.max(1, Number.isFinite(Number(init.insert?.index)) ? Number(init.insert.index) : 2), list.length - 1);
+    const insertVal = Number.isFinite(Number(init.insert?.value)) ? Number(init.insert.value) : 5;
+    const steps = [];
+    const cur = [...list];
+    steps.push({line:0, desc:`定义节点结构 {val, next}`, list:[], highlight:-1});
+    cur.forEach((v, i) => {
+      steps.push({line:Math.min(1 + i, 4), desc:`链接到节点 ${v}`, list:cur.slice(0, i + 1), highlight:i});
+    });
+    steps.push({line:5, desc:`准备在索引 ${insertAt} 前后插入 ${insertVal}`, list:[...cur], highlight:-1, insert:{at:insertAt}});
+    steps.push({line:6, desc:`创建新节点 ${insertVal}`, list:[...cur], highlight:-1, insert:{at:insertAt, newVal:insertVal}});
+    steps.push({line:7, desc:`new.next 指向后继节点`, list:[...cur], highlight:-1, insert:{at:insertAt, newVal:insertVal, linking:true}});
+    cur.splice(insertAt, 0, insertVal);
+    steps.push({line:8, desc:`完成插入 → [${cur.join(',')}]`, list:[...cur], highlight:insertAt});
+    const delIdx = Math.min(Math.max(0, Number.isFinite(Number(init.deleteIndex)) ? Number(init.deleteIndex) : cur.length - 1), cur.length - 1);
+    steps.push({line:9, desc:`准备删除索引 ${delIdx} 的节点`, list:[...cur], highlight:delIdx, del:true});
+    cur.splice(delIdx, 1);
+    steps.push({line:10, desc:`删除后 → [${cur.join(',')}]`, list:[...cur], highlight:-1});
+    return steps;
   },
   render(state) {
     const stage = document.getElementById('animStage');
@@ -1950,17 +2040,9 @@ Algorithms.binaryTree = {
          / \   \
         4   5   6
   */
-  build() {
-    // nodes[i] = {id, val, left, right}
-    const nodes = [
-      null,
-      {id:1, val:1, left:2, right:3},
-      {id:2, val:2, left:4, right:5},
-      {id:3, val:3, left:null, right:6},
-      {id:4, val:4, left:null, right:null},
-      {id:5, val:5, left:null, right:null},
-      {id:6, val:6, left:null, right:null},
-    ];
+  build(init = {}) {
+    const values = Array.isArray(init.levelOrder) && init.levelOrder.length ? init.levelOrder : [1, 2, 3, 4, 5, null, 6];
+    const nodes = buildLevelTree(values);
     const steps = [];
     const visit = []; // visited order
     const active = []; // stack
@@ -1986,7 +2068,7 @@ Algorithms.binaryTree = {
     return steps;
   },
   render(state) {
-    drawTree(state.nodes, 1, {
+    drawTree(state.nodes, state.root || 1, {
       current: state.current,
       visited: state.visit || [],
       active: state.active || [],
@@ -2152,7 +2234,7 @@ Algorithms.bst = {
       '}'
     ]
   },
-  build() {
+  build(init = {}) {
     // BST:        8
     //           /   \
     //          3    10
@@ -2160,26 +2242,16 @@ Algorithms.bst = {
     //        1   6    14
     //           / \   /
     //          4   7 13
-    const nodes = [
-      null,
-      {id:1, val:8, left:2, right:3},
-      {id:2, val:3, left:4, right:5},
-      {id:3, val:10, left:null, right:6},
-      {id:4, val:1, left:null, right:null},
-      {id:5, val:6, left:7, right:8},
-      {id:6, val:14, left:9, right:null},
-      {id:7, val:4, left:null, right:null},
-      {id:8, val:7, left:null, right:null},
-      {id:9, val:13, left:null, right:null},
-    ];
-    const target = 7; const steps = [];
+    const values = Array.isArray(init.levelOrder) && init.levelOrder.length ? init.levelOrder : [8, 3, 10, 1, 6, null, 14, null, null, 4, 7, 13];
+    const nodes = buildLevelTree(values);
+    const target = Number.isFinite(Number(init.target)) ? Number(init.target) : 7; const steps = [];
     let cur = 1;
-    steps.push({line:3, desc:`在 BST 中查找 target = ${target}`, nodes, current:cur});
+    steps.push({line:3, desc:`在 BST 中查找 target = ${target}`, nodes, current:cur, target});
     while (cur) {
       steps.push({line:3, desc:`访问节点 ${nodes[cur].val}`, nodes, current:cur});
       steps.push({line:4, desc:`比较 ${target} 与 ${nodes[cur].val}`, nodes, current:cur, comparing:[cur]});
       if (target === nodes[cur].val) {
-        steps.push({line:4, desc:`找到！返回节点 ${nodes[cur].val}`, nodes, current:cur, visited:[cur]});
+        steps.push({line:4, desc:`找到！返回节点 ${nodes[cur].val}`, nodes, current:cur, visited:[cur], target});
         return steps;
       } else if (target < nodes[cur].val) {
         steps.push({line:5, desc:`${target} < ${nodes[cur].val}，向左子树`, nodes, current:cur});
@@ -2189,15 +2261,15 @@ Algorithms.bst = {
         cur = nodes[cur].right;
       }
     }
-    steps.push({line:8, desc:`未找到`, nodes});
+    steps.push({line:8, desc:`未找到`, nodes, target});
     return steps;
   },
   render(state) {
-    drawTree(state.nodes, 1, {
+    drawTree(state.nodes, state.root || 1, {
       current: state.current,
       visited: state.visited || [],
       comparing: state.comparing || [],
-      title: '二叉搜索树 BST 查找 (target=7)',
+      title: `二叉搜索树 BST 查找 (target=${state.target ?? 7})`,
       subtitle: '左子树 < 根 < 右子树 · 每次排除一半'
     });
   }
@@ -2278,7 +2350,7 @@ Algorithms.heap = {
       ''
     ]
   },
-  build() {
+  build(init = {}) {
     const steps = [];
     const h = [];
     // insert with sift-up
@@ -2316,14 +2388,16 @@ Algorithms.heap = {
       }
     }
     steps.push({line:1, desc:`初始空堆`, heap:[]});
-    [5,3,8,1,6].forEach((v, idx) => {
+    const values = Array.isArray(init.values) && init.values.length ? init.values.map(Number).filter(Number.isFinite) : [5,3,8,1,6];
+    const pops = Math.max(0, Number.isFinite(Number(init.pops)) ? Number(init.pops) : 2);
+    values.forEach((v, idx) => {
       steps.push({line:2+idx, desc:`push(${v})`, heap:[...h]});
       push(v);
     });
-    steps.push({line:7, desc:`pop() 最小元素`, heap:[...h]});
-    pop();
-    steps.push({line:8, desc:`pop() 最小元素`, heap:[...h]});
-    pop();
+    for (let i = 0; i < Math.min(pops, h.length); i++) {
+      steps.push({line:Math.min(7 + i, 8), desc:`pop() 最小元素`, heap:[...h]});
+      pop();
+    }
     steps.push({line:8, desc:`最终堆：[${h.join(', ')}]`, heap:[...h]});
     return steps;
   },
@@ -2472,16 +2546,14 @@ Algorithms.hashTable = {
       ''
     ]
   },
-  build() {
-    const size = 7;
+  build(init = {}) {
+    const size = Math.max(3, Number.isFinite(Number(init.size)) ? Number(init.size) : 7);
     // simple hash: sum of char codes % size
     const hash = (s) => { let h=0; for (const c of s) h += c.charCodeAt(0); return h % size; };
-    const keys = [
-      {k:'apple', v:1},
-      {k:'banana', v:2},
-      {k:'cherry', v:3},
-      {k:'date', v:4},
-    ];
+    const sourceEntries = Array.isArray(init.entries) && init.entries.length
+      ? init.entries
+      : [['apple',1],['banana',2],['cherry',3],['date',4]];
+    const keys = sourceEntries.map(item => ({ k: String(item[0]), v: Number(item[1]) }));
     const table = Array.from({length:size}, () => []);
     const steps = [];
     steps.push({line:3, desc:`创建长度为 ${size} 的哈希表`, table:table.map(b=>[...b])});
@@ -2634,17 +2706,16 @@ Algorithms.bfs = {
             |
             6
   */
-  build() {
-    const nodes = {
-      1:{x:120,y:60}, 2:{x:260,y:60}, 3:{x:120,y:180},
-      4:{x:260,y:180}, 5:{x:400,y:180}, 6:{x:260,y:280}
-    };
-    const edges = [[1,2],[1,3],[2,4],[3,4],[4,5],[4,6]];
-    const adj = {1:[2,3],2:[1,4],3:[1,4],4:[2,3,5,6],5:[4],6:[4]};
+  build(init = {}) {
+    const graph = buildGraphFromInit(init, [[1,2],[1,3],[2,4],[3,4],[4,5],[4,6]], 1);
+    const nodes = graph.nodes;
+    const edges = graph.edges;
+    const adj = graph.adj;
+    const start = graph.start;
     const steps = [];
     const visited = new Set(); const q = []; const order = [];
-    visited.add(1); q.push(1);
-    steps.push({line:2, desc:`起点 1 加入 visited 和 queue`, nodes, edges, visited:[...visited], queue:[...q], order:[...order]});
+    visited.add(start); q.push(start);
+    steps.push({line:2, desc:`起点 ${start} 加入 visited 和 queue`, nodes, edges, visited:[...visited], queue:[...q], order:[...order]});
     while (q.length) {
       const node = q.shift();
       order.push(node);
@@ -2807,16 +2878,15 @@ Algorithms.dfs = {
       '}'
     ]
   },
-  build() {
-    const nodes = {
-      1:{x:120,y:60}, 2:{x:260,y:60}, 3:{x:120,y:180},
-      4:{x:260,y:180}, 5:{x:400,y:180}, 6:{x:260,y:280}
-    };
-    const edges = [[1,2],[1,3],[2,4],[3,4],[4,5],[4,6]];
-    const adj = {1:[2,3],2:[1,4],3:[1,4],4:[2,3,5,6],5:[4],6:[4]};
+  build(init = {}) {
+    const graph = buildGraphFromInit(init, [[1,2],[1,3],[2,4],[3,4],[4,5],[4,6]], 1);
+    const nodes = graph.nodes;
+    const edges = graph.edges;
+    const adj = graph.adj;
+    const start = graph.start;
     const steps = [];
-    const visited = new Set(); const stack = [1]; const order = [];
-    steps.push({line:2, desc:`起点 1 入栈`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order]});
+    const visited = new Set(); const stack = [start]; const order = [];
+    steps.push({line:2, desc:`起点 ${start} 入栈`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order]});
     while (stack.length) {
       const node = stack.pop();
       steps.push({line:4, desc:`栈顶出栈：${node}`, nodes, edges, visited:[...visited], stack:[...stack], order:[...order], current:node});
@@ -2921,8 +2991,10 @@ Algorithms.slidingWindow = {
       '}'
     ]
   },
-  build() {
-    const arr = [2, 5, 1, 8, 3, 7, 4, 6]; const k = 3; const steps = [];
+  build(init = {}) {
+    const arr = Array.isArray(init.array) && init.array.length ? init.array.map(Number).filter(Number.isFinite) : [2, 5, 1, 8, 3, 7, 4, 6];
+    const k = Math.min(arr.length, Math.max(1, Number.isFinite(Number(init.k)) ? Number(init.k) : 3));
+    const steps = [];
     let s = 0;
     for (let i = 0; i < k; i++) s += arr[i];
     steps.push({line:2, desc:`初始窗口 [0..${k-1}] 和 = ${s}`, arr, k, window:[0,k-1], sum:s, best:s});
@@ -3058,8 +3130,10 @@ Algorithms.twoPointers = {
       '}'
     ]
   },
-  build() {
-    const arr = [1, 3, 4, 6, 8, 10, 13, 17]; const target = 14; const steps = [];
+  build(init = {}) {
+    const arr = Array.isArray(init.array) && init.array.length ? init.array.map(Number).filter(Number.isFinite) : [1, 3, 4, 6, 8, 10, 13, 17];
+    const target = Number.isFinite(Number(init.target)) ? Number(init.target) : 14;
+    const steps = [];
     let l = 0, r = arr.length - 1;
     steps.push({line:1, desc:`初始化 l=0, r=${arr.length-1}，target=${target}`, arr, pointers:{l, r}});
     while (l < r) {
@@ -3147,9 +3221,10 @@ Algorithms.recursion = {
       'printf("%d", factorial(5)); // 120'
     ]
   },
-  build() {
+  build(init = {}) {
     const steps = [];
     const frames = [];
+    const n0 = Math.max(1, Number.isFinite(Number(init.n)) ? Number(init.n) : 5);
     function fact(n) {
       frames.push({n, state:'call', val:null});
       steps.push({line:0, desc:`调用 factorial(${n})`, frames:frames.map(f=>({...f}))});
@@ -3169,7 +3244,7 @@ Algorithms.recursion = {
       frames.pop();
       return result;
     }
-    fact(5);
+    fact(n0);
     return steps;
   },
   render(state) {
@@ -3265,8 +3340,8 @@ Algorithms.dp = {
       '}'
     ]
   },
-  build() {
-    const n = 9; const dp = new Array(n+1).fill(0);
+  build(init = {}) {
+    const n = Math.max(1, Number.isFinite(Number(init.n)) ? Number(init.n) : 9); const dp = new Array(n+1).fill(0);
     const steps = [];
     steps.push({line:1, desc:`创建 dp 数组，长度 ${n+1}`, dp:[...dp]});
     dp[1] = 1;
@@ -3354,6 +3429,7 @@ const State = {
   playing: false,
   playTimer: null,
   customInitByAlgo: {},
+  initDraftByAlgo: {},
   userLineMap: {},
   userTemplateLineMap: {},
 };
@@ -3537,50 +3613,120 @@ function rebuildUserLineMap() {
   State.userLineMap = map;
 }
 
-function parseCustomInitFromCode(algoKey, code, lang) {
-  const lines = normalizeCodeLines(code, lang);
-  const text = lines.join('\n');
-  const arrMatch = text.match(/\[\s*-?\d+(?:\s*,\s*-?\d+)*\s*\]/);
-  let array = null;
-  if (arrMatch) {
-    array = arrMatch[0]
-      .slice(1, -1)
-      .split(',')
-      .map(s => Number(s.trim()))
-      .filter(n => Number.isFinite(n));
-    if (!array.length) array = null;
-  }
-
-  let target = null;
-  const t1 = text.match(/\btarget\b\s*[:=]\s*(-?\d+)/i);
-  const t2 = text.match(/(?:binarysearch|linearsearch)\s*\([^,]+,\s*(-?\d+)\s*\)/i);
-  if (t1) target = Number(t1[1]);
-  else if (t2) target = Number(t2[1]);
-
-  const arrayAlgos = new Set(['bubbleSort','selectionSort','insertionSort','quickSort','mergeSort','linearSearch','binarySearch']);
-  if (!arrayAlgos.has(algoKey)) {
-    return { ok:false, msg:'当前算法暂不支持从代码自动提取初始化，已保留默认初始化。' };
-  }
-  if (!array || array.length < 2) {
-    return { ok:false, msg:'未识别到可用数组初始化，请在代码中写类似 [5, 2, 8, 1]。' };
-  }
-  if ((algoKey === 'linearSearch' || algoKey === 'binarySearch') && !Number.isFinite(target)) {
-    return { ok:false, msg:'查找算法请提供 target，例如 target = 13。' };
-  }
-  return { ok:true, init: { array, target } };
+function deepClone(v) {
+  return JSON.parse(JSON.stringify(v));
 }
 
-function applyCurrentInitFromCode() {
-  const code = document.getElementById('codeInput').value;
-  const parsed = parseCustomInitFromCode(State.currentAlgo, code, State.currentLang);
-  if (!parsed.ok) {
-    showCodeStatus('warn', parsed.msg);
-    return;
+function getDefaultInitForAlgo(key) {
+  const defaults = {
+    bubbleSort: { array: [5, 2, 8, 1, 9, 3, 7] },
+    selectionSort: { array: [64, 25, 12, 22, 11, 34] },
+    insertionSort: { array: [5, 3, 8, 4, 2] },
+    quickSort: { array: [3, 6, 8, 1, 5, 4] },
+    mergeSort: { array: [8, 3, 5, 1, 7, 2] },
+    linearSearch: { array: [7, 3, 9, 1, 5, 8, 4], target: 5 },
+    binarySearch: { array: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19], target: 13 },
+    stack: { initial: [10, 20, 30], pops: 2 },
+    queue: { initial: [10, 20, 30], dequeues: 2 },
+    linkedList: { list: [1, 2, 3, 4], insert: { index: 2, value: 5 }, deleteIndex: 4 },
+    hashTable: { size: 7, entries: [['apple', 1], ['banana', 2], ['cherry', 3], ['date', 4]] },
+    binaryTree: { levelOrder: [1, 2, 3, 4, 5, null, 6] },
+    bst: { levelOrder: [8, 3, 10, 1, 6, null, 14, null, null, 4, 7, 13], target: 7 },
+    heap: { values: [5, 3, 8, 1, 6], pops: 2 },
+    bfs: { start: 1, edges: [[1, 2], [1, 3], [2, 4], [3, 4], [4, 5], [4, 6]] },
+    dfs: { start: 1, edges: [[1, 2], [1, 3], [2, 4], [3, 4], [4, 5], [4, 6]] },
+    slidingWindow: { array: [2, 5, 1, 8, 3, 7, 4, 6], k: 3 },
+    twoPointers: { array: [1, 3, 4, 6, 8, 10, 13, 17], target: 14 },
+    recursion: { n: 5 },
+    dp: { n: 9 }
+  };
+  return deepClone(defaults[key] || {});
+}
+
+function getCurrentInitForAlgo(key) {
+  return deepClone(State.customInitByAlgo[key] || getDefaultInitForAlgo(key));
+}
+
+function normalizeInitForAlgo(key, init) {
+  const out = deepClone(init || {});
+  const asNumArray = (v, fallback) => Array.isArray(v) ? v.map(Number).filter(Number.isFinite) : fallback;
+  if (['bubbleSort','selectionSort','insertionSort','quickSort','mergeSort'].includes(key)) {
+    out.array = asNumArray(out.array, getDefaultInitForAlgo(key).array);
   }
-  State.customInitByAlgo[State.currentAlgo] = parsed.init;
-  stopPlay();
-  loadAlgorithm(State.currentAlgo);
-  showCodeStatus('ok', '已从你的代码应用左侧初始化。');
+  if (key === 'linearSearch' || key === 'binarySearch') {
+    out.array = asNumArray(out.array, getDefaultInitForAlgo(key).array);
+    out.target = Number.isFinite(Number(out.target)) ? Number(out.target) : getDefaultInitForAlgo(key).target;
+  }
+  if (key === 'stack') {
+    out.initial = asNumArray(out.initial, getDefaultInitForAlgo(key).initial);
+    out.pops = Math.max(0, Number.isFinite(Number(out.pops)) ? Number(out.pops) : 2);
+  }
+  if (key === 'queue') {
+    out.initial = asNumArray(out.initial, getDefaultInitForAlgo(key).initial);
+    out.dequeues = Math.max(0, Number.isFinite(Number(out.dequeues)) ? Number(out.dequeues) : 2);
+  }
+  if (key === 'linkedList') {
+    out.list = asNumArray(out.list, getDefaultInitForAlgo(key).list);
+    out.insert = out.insert || {};
+    out.insert.index = Math.max(1, Number.isFinite(Number(out.insert.index)) ? Number(out.insert.index) : 2);
+    out.insert.value = Number.isFinite(Number(out.insert.value)) ? Number(out.insert.value) : 5;
+    out.deleteIndex = Number.isFinite(Number(out.deleteIndex)) ? Number(out.deleteIndex) : 4;
+  }
+  if (key === 'hashTable') {
+    out.size = Math.max(3, Number.isFinite(Number(out.size)) ? Number(out.size) : 7);
+    if (!Array.isArray(out.entries)) out.entries = getDefaultInitForAlgo(key).entries;
+  }
+  if (key === 'binaryTree' || key === 'bst') {
+    out.levelOrder = Array.isArray(out.levelOrder) ? out.levelOrder : getDefaultInitForAlgo(key).levelOrder;
+    if (key === 'bst') out.target = Number.isFinite(Number(out.target)) ? Number(out.target) : 7;
+  }
+  if (key === 'heap') {
+    out.values = asNumArray(out.values, getDefaultInitForAlgo(key).values);
+    out.pops = Math.max(0, Number.isFinite(Number(out.pops)) ? Number(out.pops) : 2);
+  }
+  if (key === 'bfs' || key === 'dfs') {
+    out.start = Number.isFinite(Number(out.start)) ? Number(out.start) : 1;
+    out.edges = Array.isArray(out.edges) ? out.edges : getDefaultInitForAlgo(key).edges;
+  }
+  if (key === 'slidingWindow') {
+    out.array = asNumArray(out.array, getDefaultInitForAlgo(key).array);
+    out.k = Math.max(1, Number.isFinite(Number(out.k)) ? Number(out.k) : 3);
+  }
+  if (key === 'twoPointers') {
+    out.array = asNumArray(out.array, getDefaultInitForAlgo(key).array);
+    out.target = Number.isFinite(Number(out.target)) ? Number(out.target) : 14;
+  }
+  if (key === 'recursion' || key === 'dp') {
+    out.n = Math.max(1, Number.isFinite(Number(out.n)) ? Number(out.n) : (key === 'recursion' ? 5 : 9));
+  }
+  return out;
+}
+
+function renderInitEditor() {
+  const key = State.currentAlgo;
+  const area = document.getElementById('initInput');
+  if (!area) return;
+  if (State.initDraftByAlgo[key] == null) {
+    State.initDraftByAlgo[key] = JSON.stringify(getCurrentInitForAlgo(key), null, 2);
+  }
+  area.value = State.initDraftByAlgo[key];
+}
+
+function applyCurrentInitFromPanel() {
+  const key = State.currentAlgo;
+  const area = document.getElementById('initInput');
+  if (!area) return;
+  try {
+    const parsed = JSON.parse(area.value || '{}');
+    const normalized = normalizeInitForAlgo(key, parsed);
+    State.customInitByAlgo[key] = normalized;
+    State.initDraftByAlgo[key] = JSON.stringify(normalized, null, 2);
+    stopPlay();
+    loadAlgorithm(key, { preserveCode: true });
+    showCodeStatus('ok', '已应用左侧初始化配置。');
+  } catch (err) {
+    showCodeStatus('error', `初始化 JSON 解析失败: ${err.message}`);
+  }
 }
 
 function validatePython(lines) {
@@ -3761,14 +3907,19 @@ function resolveLine(algo, state, lang) {
   return 0;
 }
 
-function loadAlgorithm(key) {
+function loadAlgorithm(key, options = {}) {
   State.currentAlgo = key;
   const algo = Algorithms[key];
-  const init = State.customInitByAlgo[key] || {};
+  const init = getCurrentInitForAlgo(key);
   State.steps = algo.build(init);
   State.step = 0;
   document.getElementById('algoTitle').textContent = algo.title;
-  resetCodeInputByAlgoAndLang();
+  renderInitEditor();
+  if (options.preserveCode) {
+    updateCodeHighlight();
+  } else {
+    resetCodeInputByAlgoAndLang();
+  }
   updateOperationHint();
   updateView();
   // update nav active
@@ -3891,7 +4042,7 @@ function bindControls() {
   document.getElementById('btnPrev').addEventListener('click', () => { stopPlay(); step(-1); });
   document.getElementById('btnReset').addEventListener('click', reset);
   document.getElementById('btnPlay').addEventListener('click', togglePlay);
-  document.getElementById('btnApplyInit').addEventListener('click', applyCurrentInitFromCode);
+  document.getElementById('btnApplyInit').addEventListener('click', applyCurrentInitFromPanel);
   document.getElementById('btnValidate').addEventListener('click', runCodeValidation);
   document.getElementById('speedRange').addEventListener('input', () => {
     if (State.playing) { stopPlay(); startPlay(); }
@@ -3923,6 +4074,22 @@ function bindControls() {
       e.preventDefault();
       insertTabAtCursor();
       return;
+    }
+  });
+
+  document.getElementById('initInput').addEventListener('input', (e) => {
+    State.initDraftByAlgo[State.currentAlgo] = e.target.value;
+  });
+
+  document.getElementById('initInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.target;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      ta.value = ta.value.slice(0, start) + '  ' + ta.value.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + 2;
+      State.initDraftByAlgo[State.currentAlgo] = ta.value;
     }
   });
 }
