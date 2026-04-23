@@ -316,6 +316,9 @@
           <button id="btnPlay" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm">
             <i class="fa-solid fa-play" id="playIcon"></i> <span id="playText">自动播放</span>
           </button>
+          <button id="btnApplyInit" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-indigo-500 text-white font-medium text-sm shadow-lg shadow-indigo-500/30">
+            <i class="fa-solid fa-sliders"></i> 应用初始化
+          </button>
           <button id="btnValidate" class="btn flex items-center gap-2 px-4 h-10 rounded-lg bg-emerald-500 text-white font-medium text-sm shadow-lg shadow-emerald-500/30">
             <i class="fa-solid fa-check-double"></i> 运行校验
           </button>
@@ -610,8 +613,8 @@ Algorithms.bubbleSort = {
     go:     { init:1, outer:2, inner:3, compare:4, swap:5, end:9 },
     c:      { init:0, outer:1, inner:2, compare:3, swap:4, end:7 },
   },
-  build() {
-    const arr = [5, 2, 8, 1, 9, 3, 7];
+  build(init = {}) {
+    const arr = Array.isArray(init.array) && init.array.length ? [...init.array] : [5, 2, 8, 1, 9, 3, 7];
     const steps = [];
     const lm = this.lineMap;
     steps.push({ lineKey:'init', desc:`初始化数组 [${arr.join(', ')}]`, arr:[...arr], sorted:[] });
@@ -742,8 +745,8 @@ Algorithms.selectionSort = {
     go:    {outer:2,setmin:3,inner:4,compare:5,update:6,swap:9,end:11},
     c:     {outer:1,setmin:2,inner:3,compare:4,update:5,swap:7,end:9},
   },
-  build() {
-    const arr = [64, 25, 12, 22, 11, 34];
+  build(init = {}) {
+    const arr = Array.isArray(init.array) && init.array.length ? [...init.array] : [64, 25, 12, 22, 11, 34];
     const a = [...arr]; const n = a.length; const steps = [];
     steps.push({lineKey:'outer', desc:`初始 [${a.join(', ')}]`, arr:[...a], sorted:[]});
     for (let i = 0; i < n; i++) {
@@ -875,8 +878,8 @@ Algorithms.insertionSort = {
     go:    {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
     c:     {outer:1,key:2,setj:3,while:4,shift:5,dec:6,insert:8,end:10},
   },
-  build() {
-    const a = [5, 3, 8, 4, 2]; const n = a.length; const steps = [];
+  build(init = {}) {
+    const a = Array.isArray(init.array) && init.array.length ? [...init.array] : [5, 3, 8, 4, 2]; const n = a.length; const steps = [];
     steps.push({lineKey:'outer', desc:`初始 [${a.join(', ')}]`, arr:[...a], sorted:[0]});
     for (let i = 1; i < n; i++) {
       const key = a[i];
@@ -1024,8 +1027,8 @@ Algorithms.quickSort = {
     go:    {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
     c:     {check:1,pivot:2,seti:3,loop:4,cmp:5,inc:6,swap:7,place:9,p:10,rec1:11,rec2:12},
   },
-  build() {
-    const a = [3, 6, 8, 1, 5, 4]; const steps = []; const lm = this.lineMap;
+  build(init = {}) {
+    const a = Array.isArray(init.array) && init.array.length ? [...init.array] : [3, 6, 8, 1, 5, 4]; const steps = []; const lm = this.lineMap;
     const sorted = new Set();
     steps.push({lineKey:'check', desc:`初始 [${a.join(', ')}]`, arr:[...a], sorted:[]});
     function qs(lo, hi) {
@@ -1209,8 +1212,8 @@ Algorithms.mergeSort = {
     ]
   },
   // we'll keep line map simple: always highlight a representative line
-  build() {
-    const a = [8, 3, 5, 1, 7, 2]; const steps = [];
+  build(init = {}) {
+    const a = Array.isArray(init.array) && init.array.length ? [...init.array] : [8, 3, 5, 1, 7, 2]; const steps = [];
     const sortedRanges = [];
     function ms(l, r) {
       if (l >= r) {
@@ -1359,9 +1362,9 @@ Algorithms.binarySearch = {
     go:    {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
     c:     {init:1,loop:2,mid:3,eq:4,ret:4,less:5,moveL:5,more:6,moveR:6,notfound:8},
   },
-  build() {
-    const arr = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
-    const target = 13; const steps = [];
+  build(init = {}) {
+    const arr = Array.isArray(init.array) && init.array.length ? [...init.array] : [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+    const target = Number.isFinite(init.target) ? init.target : 13; const steps = [];
     steps.push({lineKey:'init', desc:`初始化 l=0, r=${arr.length-1}，查找 target=${target}`, arr, pointers:{l:0, r:arr.length-1}});
     let l = 0, r = arr.length - 1;
     while (l <= r) {
@@ -1459,8 +1462,8 @@ Algorithms.linearSearch = {
     go:{loop:1,check:2,found:2,notfound:4},
     c:{loop:1,check:2,found:2,notfound:4},
   },
-  build() {
-    const arr = [7, 3, 9, 1, 5, 8, 4]; const target = 5; const steps = [];
+  build(init = {}) {
+    const arr = Array.isArray(init.array) && init.array.length ? [...init.array] : [7, 3, 9, 1, 5, 8, 4]; const target = Number.isFinite(init.target) ? init.target : 5; const steps = [];
     for (let i = 0; i < arr.length; i++) {
       steps.push({lineKey:'loop', desc:`i = ${i}`, arr, pointers:{i}});
       steps.push({lineKey:'check', desc:`arr[${i}]=${arr[i]} == ${target}?`, arr, pointers:{i}, highlights:{[i]:'compare'}});
@@ -3350,6 +3353,9 @@ const State = {
   steps: [],
   playing: false,
   playTimer: null,
+  customInitByAlgo: {},
+  userLineMap: {},
+  userTemplateLineMap: {},
 };
 
 const SupportedLangs = ['python','java','cpp','c','js','go'];
@@ -3457,6 +3463,124 @@ function normalizeCodeLines(code, lang) {
     .map(line => stripInlineComments(line, lang))
     .map(line => line.trimEnd());
   return lines.filter(line => line.trim() !== '');
+}
+
+function isCommentOnlyLine(line, lang) {
+  const t = line.trim();
+  if (!t) return true;
+  if (lang === 'python') return t.startsWith('#');
+  return t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || t.startsWith('*/');
+}
+
+function getExecutableLinesWithIndex(code, lang) {
+  const raw = code.split('\n');
+  const out = [];
+  raw.forEach((line, idx) => {
+    if (isCommentOnlyLine(line, lang)) return;
+    const stripped = stripInlineComments(line, lang).trim();
+    if (!stripped) return;
+    out.push({ idx, text: stripped.toLowerCase() });
+  });
+  return out;
+}
+
+function extractTokens(text) {
+  const words = (text.toLowerCase().match(/[a-z_][a-z0-9_]*/g) || []);
+  const stop = new Set(['if','else','for','while','return','class','def','func','int','void','let','const','var','public','private','static','new','null','true','false']);
+  return words.filter(w => !stop.has(w) && w.length >= 2);
+}
+
+function rebuildUserLineMap() {
+  const algo = Algorithms[State.currentAlgo];
+  if (!algo) {
+    State.userLineMap = {};
+    State.userTemplateLineMap = {};
+    return;
+  }
+  const code = document.getElementById('codeInput').value;
+  const execLines = getExecutableLinesWithIndex(code, State.currentLang);
+  const map = {};
+  const tpl = algo.code[State.currentLang] || algo.code.python || [];
+
+  const templateExecIdx = [];
+  tpl.forEach((line, idx) => {
+    if (!isCommentOnlyLine(line, State.currentLang) && line.trim()) {
+      templateExecIdx.push(idx);
+    }
+  });
+  const templateMap = {};
+  for (let i = 0; i < Math.min(templateExecIdx.length, execLines.length); i++) {
+    templateMap[templateExecIdx[i]] = execLines[i].idx;
+  }
+  State.userTemplateLineMap = templateMap;
+
+  if (!algo.lineMap || !algo.lineMap[State.currentLang]) {
+    State.userLineMap = {};
+    return;
+  }
+
+  const lm = algo.lineMap[State.currentLang];
+
+  Object.entries(lm).forEach(([lineKey, tplIdx]) => {
+    const base = (tpl[tplIdx] || '').trim();
+    const tokens = extractTokens(base);
+    let hit = null;
+    for (const token of tokens) {
+      hit = execLines.find(item => item.text.includes(token));
+      if (hit) break;
+    }
+    if (!hit && execLines.length) {
+      hit = execLines[Math.min(Object.keys(map).length, execLines.length - 1)];
+    }
+    if (hit) map[lineKey] = hit.idx;
+  });
+  State.userLineMap = map;
+}
+
+function parseCustomInitFromCode(algoKey, code, lang) {
+  const lines = normalizeCodeLines(code, lang);
+  const text = lines.join('\n');
+  const arrMatch = text.match(/\[\s*-?\d+(?:\s*,\s*-?\d+)*\s*\]/);
+  let array = null;
+  if (arrMatch) {
+    array = arrMatch[0]
+      .slice(1, -1)
+      .split(',')
+      .map(s => Number(s.trim()))
+      .filter(n => Number.isFinite(n));
+    if (!array.length) array = null;
+  }
+
+  let target = null;
+  const t1 = text.match(/\btarget\b\s*[:=]\s*(-?\d+)/i);
+  const t2 = text.match(/(?:binarysearch|linearsearch)\s*\([^,]+,\s*(-?\d+)\s*\)/i);
+  if (t1) target = Number(t1[1]);
+  else if (t2) target = Number(t2[1]);
+
+  const arrayAlgos = new Set(['bubbleSort','selectionSort','insertionSort','quickSort','mergeSort','linearSearch','binarySearch']);
+  if (!arrayAlgos.has(algoKey)) {
+    return { ok:false, msg:'当前算法暂不支持从代码自动提取初始化，已保留默认初始化。' };
+  }
+  if (!array || array.length < 2) {
+    return { ok:false, msg:'未识别到可用数组初始化，请在代码中写类似 [5, 2, 8, 1]。' };
+  }
+  if ((algoKey === 'linearSearch' || algoKey === 'binarySearch') && !Number.isFinite(target)) {
+    return { ok:false, msg:'查找算法请提供 target，例如 target = 13。' };
+  }
+  return { ok:true, init: { array, target } };
+}
+
+function applyCurrentInitFromCode() {
+  const code = document.getElementById('codeInput').value;
+  const parsed = parseCustomInitFromCode(State.currentAlgo, code, State.currentLang);
+  if (!parsed.ok) {
+    showCodeStatus('warn', parsed.msg);
+    return;
+  }
+  State.customInitByAlgo[State.currentAlgo] = parsed.init;
+  stopPlay();
+  loadAlgorithm(State.currentAlgo);
+  showCodeStatus('ok', '已从你的代码应用左侧初始化。');
 }
 
 function validatePython(lines) {
@@ -3574,6 +3698,7 @@ function resetCodeInputByAlgoAndLang() {
   const lines = algo.code[State.currentLang] || algo.code.python;
   document.getElementById('codeInput').value = buildCommentTemplate(lines, State.currentLang, algo.title);
   updateCodeHighlight();
+  rebuildUserLineMap();
   clearCodeError();
 }
 
@@ -3592,6 +3717,7 @@ function updateCodeHighlight() {
   }).join('');
   hl.innerHTML = rendered;
   syncEditorScroll();
+  rebuildUserLineMap();
 
   const algo = Algorithms[State.currentAlgo];
   const s = State.steps[State.step];
@@ -3620,7 +3746,15 @@ function insertTabAtCursor() {
 
 function resolveLine(algo, state, lang) {
   // If step has raw .line use it; otherwise map via lineMap
-  if (state.line != null) return state.line;
+  if (state.line != null) {
+    if (State.userTemplateLineMap && State.userTemplateLineMap[state.line] != null) {
+      return State.userTemplateLineMap[state.line];
+    }
+    return state.line;
+  }
+  if (state.lineKey && State.userLineMap && State.userLineMap[state.lineKey] != null) {
+    return State.userLineMap[state.lineKey];
+  }
   if (state.lineKey && algo.lineMap && algo.lineMap[lang]) {
     return algo.lineMap[lang][state.lineKey];
   }
@@ -3630,7 +3764,8 @@ function resolveLine(algo, state, lang) {
 function loadAlgorithm(key) {
   State.currentAlgo = key;
   const algo = Algorithms[key];
-  State.steps = algo.build();
+  const init = State.customInitByAlgo[key] || {};
+  State.steps = algo.build(init);
   State.step = 0;
   document.getElementById('algoTitle').textContent = algo.title;
   resetCodeInputByAlgoAndLang();
@@ -3756,6 +3891,7 @@ function bindControls() {
   document.getElementById('btnPrev').addEventListener('click', () => { stopPlay(); step(-1); });
   document.getElementById('btnReset').addEventListener('click', reset);
   document.getElementById('btnPlay').addEventListener('click', togglePlay);
+  document.getElementById('btnApplyInit').addEventListener('click', applyCurrentInitFromCode);
   document.getElementById('btnValidate').addEventListener('click', runCodeValidation);
   document.getElementById('speedRange').addEventListener('input', () => {
     if (State.playing) { stopPlay(); startPlay(); }
